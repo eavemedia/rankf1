@@ -257,17 +257,18 @@ export default function Home() {
     if (view !== "results") return;
 
     const submit = async () => {
-      let userKey = localStorage.getItem("rankf1_user");
-      if (!userKey) {
-        userKey = makeUserKey();
-        localStorage.setItem("rankf1_user", userKey);
-      }
-
-      let userToken = localStorage.getItem("rankf1_token");
-      if (!userToken) {
-        userToken = userKey;
-        localStorage.setItem("rankf1_token", userToken);
-      }
+      const userKey =
+      localStorage.getItem("rankf1_user") ?? (() => {
+        const k = makeUserKey();
+        localStorage.setItem("rankf1_user", k);
+        return k;
+      })();
+    
+    const userToken =
+      localStorage.getItem("rankf1_token") ?? (() => {
+        localStorage.setItem("rankf1_token", userKey);
+        return userKey;
+      })();
 
       const rankingSlugs = sortedRanking.map((t) => t.slug);
 
