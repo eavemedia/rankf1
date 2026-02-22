@@ -31,6 +31,15 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+      
+        <footer className="w-full text-center text-xs text-gray-500 py-6 border-t border-white/10 mt-12">
+  <div>© {new Date().getFullYear()} RankF1</div>
+  <div className="mt-2 space-x-4">
+    <a href="/privacy" className="hover:underline">Privacy Policy</a>
+    <a href="mailto:michael@eave.media" className="hover:underline">Contact</a>
+  </div>
+</footer>
+      
       </body>
     </html>
   );
