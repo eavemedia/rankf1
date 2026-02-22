@@ -26,7 +26,7 @@ const supabase = createClient(
         }
   
         const { error } = await supabase
-          .from("analytics.events")
+          .from("events")
           .insert({
             event_name: eventName,
             user_key: userKey,
