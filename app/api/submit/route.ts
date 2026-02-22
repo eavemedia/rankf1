@@ -19,7 +19,8 @@ export async function POST(req: Request) {
 
     // Vercel automatically provides this header in production
     const countryCode = req.headers.get("x-vercel-ip-country");
-
+    console.log("Country header:", countryCode);
+    
     const { error } = await supabase.rpc("submit_final_result_v2", {
       p_category_id: categoryId,
       p_user_key: userKey,
