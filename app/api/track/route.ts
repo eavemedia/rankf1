@@ -8,47 +8,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function POST(req: Request) {
-    try {
-      const body = await req.json();
-  
-      if (!body?.type) {
-        return NextResponse.json({ error: "Missing type" }, { status: 400 });
-      }
-  
-      // ---- EVENT ----
-      if (body.type === "event") {
-        const { eventName, userKey, props, experimentKey, variantKey } = body;
-  
-        if (!eventName || !userKey) {
-          return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-        }
-  
-        const { error } = await supabase
-          .from("analytics.events")
-          .insert({
-            event_name: eventName,
-            user_key: userKey,
-            props: props ?? {},
-            experiment_key: experimentKey ?? null,
-            variant_key: variantKey ?? null,
-          });
-  
-        if (error) {
-          console.error(error);
-          return NextResponse.json({ error: "Insert failed" }, { status: 500 });
-        }
-  
-        return NextResponse.json({ ok: true });
-      }
-  
-      return NextResponse.json({ error: "Invalid type" }, { status: 400 });
-  
-    } catch (err) {
-      console.error("Track API error:", err);
-      return NextResponse.json({ error: "Server error" }, { status: 500 });
-    }
-  }
+
 
   export async function POST(req: Request) {
     try {
