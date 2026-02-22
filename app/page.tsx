@@ -147,11 +147,6 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function getCarCutoutPath(teamSlug: string) {
-  // Add assets later: /public/images/2026-liveries/cutouts/<slug>.png
-  // If missing, we fallback to the normal imagePath via onError.
-  return `/images/2026-liveries/cutouts/${teamSlug}.png`;
-}
 
 // Deterministic 50/50 assignment from userKey + experimentKey (no WebCrypto needed)
 function assignVariant(userKey: string, experimentKey: string) {
@@ -684,18 +679,12 @@ export default function Home() {
 
 {/* Winner image as subtle background */}
 <div className="absolute inset-0 opacity-[0.38] flex items-center justify-center">
-  <img
-    src={top1 ? getCarCutoutPath(top1.slug) : ""}
-    alt=""
-    className="w-full h-auto max-w-none"
-    draggable={false}
-    onError={(e) => {
-      const img = e.currentTarget;
-      if ((img as any).dataset?.fallbackDone) return;
-      (img as any).dataset.fallbackDone = "1";
-      img.src = top1?.imagePath ?? "";
-    }}
-  />
+<img
+  src={top1?.imagePath ?? ""}
+  alt=""
+  className="w-full h-auto max-w-none"
+  draggable={false}
+/>
 </div>
 <div className="absolute inset-0 bg-black/40" />
 
