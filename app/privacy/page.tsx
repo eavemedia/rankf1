@@ -15,9 +15,8 @@ export default function Privacy() {
         </p>
   
         <p className="mb-4">
-          We may use affiliate links. If you purchase through those links,
-          we may earn a commission at no additional cost to you.
-        </p>
+  Some links on RankF1 may be affiliate links. If you purchase through those links, we may earn a commission at no additional cost to you. RankF1 is an independent fan-created site and is not affiliated with, endorsed by, or officially connected to Formula 1, its teams, or its partners.
+</p>
   
         <p>
           For questions, contact: michael@eave.media
