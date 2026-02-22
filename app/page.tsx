@@ -258,17 +258,19 @@ export default function Home() {
 
     const submit = async () => {
       const userKey =
-      localStorage.getItem("rankf1_user") ?? (() => {
-        const k = makeUserKey();
-        localStorage.setItem("rankf1_user", k);
-        return k;
-      })();
-    
-    const userToken =
-      localStorage.getItem("rankf1_token") ?? (() => {
-        localStorage.setItem("rankf1_token", userKey);
-        return userKey;
-      })();
+        localStorage.getItem("rankf1_user") ??
+        (() => {
+          const k = makeUserKey();
+          localStorage.setItem("rankf1_user", k);
+          return k;
+        })();
+
+      const userToken =
+        localStorage.getItem("rankf1_token") ??
+        (() => {
+          localStorage.setItem("rankf1_token", userKey);
+          return userKey;
+        })();
 
       const rankingSlugs = sortedRanking.map((t) => t.slug);
 
@@ -351,7 +353,6 @@ export default function Home() {
     setEmail("");
   }
 
-  // Make the default ring thickness match the selection ring
   const topRing =
     selected === "top"
       ? "ring-4 ring-green-500"
@@ -373,6 +374,10 @@ export default function Home() {
 
   const top1PctText =
     top1Pct == null ? "Loading…" : `${Math.max(0, Math.round(top1Pct))}% of fans also ranked this #1`;
+
+  // Image fit: show full car (no cropping) + preserve the dark studio bg
+  const IMG_FIT = "object-contain bg-black";
+  const IMG_POS = "object-center"; // tweak to: object-[center_45%] if you want slightly higher
 
   return (
     <main className="min-h-[100dvh] bg-black text-white flex flex-col items-center justify-center px-2 pt-3 pb-3">
@@ -411,10 +416,7 @@ export default function Home() {
                 <h2 className="text-2xl font-bold">Global Results</h2>
                 <p className="text-gray-400 mt-2">We’ll show the live leaderboard here next.</p>
               </div>
-              <button
-                onClick={backFromGlobal}
-                className="px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl text-sm"
-              >
+              <button onClick={backFromGlobal} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl text-sm">
                 Back
               </button>
             </div>
@@ -454,7 +456,7 @@ export default function Home() {
               <img
                 src={topTeam.imagePath}
                 alt={topTeam.name}
-                className="absolute inset-0 h-full w-full object-cover"
+                className={`absolute inset-0 h-full w-full ${IMG_FIT} ${IMG_POS}`}
                 draggable={false}
               />
               <div className="absolute inset-0 bg-black/20" />
@@ -486,7 +488,7 @@ export default function Home() {
               <img
                 src={bottomTeam.imagePath}
                 alt={bottomTeam.name}
-                className="absolute inset-0 h-full w-full object-cover"
+                className={`absolute inset-0 h-full w-full ${IMG_FIT} ${IMG_POS}`}
                 draggable={false}
               />
               <div className="absolute inset-0 bg-black/20" />
@@ -512,7 +514,6 @@ export default function Home() {
 
       {view === "results" && (
         <div className="w-full max-w-lg flex-1 flex flex-col gap-2">
-          {/* Top bar */}
           <div className="flex items-center justify-between gap-3">
             <div className="leading-tight">
               <div className="text-base font-semibold">Personal Results</div>
@@ -534,9 +535,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Main container */}
           <div className="flex-1 min-h-0 flex flex-col gap-2">
-            {/* Hero */}
             <div
               className="relative overflow-hidden rounded-2xl border border-white/10"
               style={{
@@ -544,9 +543,6 @@ export default function Home() {
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundImage: `
-                  /* winning livery background goes first later, example:
-                     url(${/* WINNER_BG[top1?.slug ?? ""] ?? "" */ ""}),
-                  */
                   radial-gradient(700px 280px at 20% 20%, ${accentGlowA} 0%, rgba(0,0,0,0) 60%),
                   radial-gradient(520px 240px at 85% 40%, ${accentGlowB} 0%, rgba(0,0,0,0) 62%),
                   linear-gradient(180deg, rgba(10,10,10,0.82) 0%, rgba(0,0,0,0.92) 100%)
@@ -588,7 +584,7 @@ export default function Home() {
                   <img
                     src={top1?.imagePath}
                     alt={top1?.name ?? "Top"}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className={`absolute inset-0 w-full h-full ${IMG_FIT} ${IMG_POS}`}
                     draggable={false}
                   />
                   <div className="absolute inset-0 bg-black/15" />
@@ -600,7 +596,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* #2 and #3 cards */}
             <div className="grid grid-cols-2 gap-2" style={{ flex: "0 0 22%" }}>
               {[sortedRanking[1], sortedRanking[2]].map((t, i) => {
                 if (!t) return null;
@@ -637,7 +632,7 @@ export default function Home() {
                         <img
                           src={t.imagePath}
                           alt={t.name}
-                          className="absolute inset-0 w-full h-full object-cover"
+                          className={`absolute inset-0 w-full h-full ${IMG_FIT} ${IMG_POS}`}
                           draggable={false}
                         />
                         <div className="absolute inset-0 bg-black/18" />
@@ -648,7 +643,6 @@ export default function Home() {
               })}
             </div>
 
-            {/* 4-11 + share/email */}
             <div className="flex-1 min-h-0 grid grid-cols-2 gap-2">
               <div className="rounded-2xl border border-white/10 bg-black/25 p-2.5 flex flex-col min-h-0">
                 <div className="text-xs text-gray-300/90 mb-2">4–7</div>
