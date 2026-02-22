@@ -27,9 +27,13 @@ export async function POST(req: Request) {
       p_user_token: userToken,
       p_country_code: countryCode, // NEW
     });
-
+    
     if (error) {
-      return NextResponse.json({ error }, { status: 400 });
+      console.error("RPC ERROR:", error);
+      return NextResponse.json(
+        { error: error.message, details: error },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({ ok: true });
