@@ -479,7 +479,7 @@ export default function Home() {
               <img
                 src={bottomTeam.imagePath}
                 alt={bottomTeam.name}
-                className="block w-full h-auto"
+                className="block w-full h-auto max-h-[42vh] object-contain"
                 draggable={false}
               />
               <div className="absolute inset-0 bg-black/20" />
