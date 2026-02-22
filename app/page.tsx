@@ -58,6 +58,23 @@ function makeUserKey() {
   return `rk_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
+function getOrCreateUserKey() {
+  if (typeof window === "undefined") return "";
+  const existing = localStorage.getItem("rankf1_user");
+  if (existing) return existing;
+  const k = makeUserKey();
+  localStorage.setItem("rankf1_user", k);
+  return k;
+}
+
+function getOrCreateUserToken(userKey: string) {
+  if (typeof window === "undefined") return "";
+  const existing = localStorage.getItem("rankf1_token");
+  if (existing) return existing;
+  localStorage.setItem("rankf1_token", userKey);
+  return userKey;
+}
+
 function expectedScore(ratingA: number, ratingB: number) {
   return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
 }
@@ -130,10 +147,49 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function hapticTap() {
-  if (typeof navigator === "undefined") return;
-  if (typeof (navigator as any).vibrate === "function") {
-    (navigator as any).vibrate(12);
+function getCarCutoutPath(teamSlug: string) {
+  // Add assets later: /public/images/2026-liveries/cutouts/<slug>.png
+  // If missing, we fallback to the normal imagePath via onError.
+  return `/images/2026-liveries/cutouts/${teamSlug}.png`;
+}
+
+// Deterministic 50/50 assignment from userKey + experimentKey (no WebCrypto needed)
+function assignVariant(userKey: string, experimentKey: string) {
+  const s = `${experimentKey}:${userKey}`;
+
+  // FNV-1a 32-bit hash
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+
+  const bucket = (h >>> 0) % 2;
+  return bucket === 0 ? "share_result" : "share_my_podium";
+}
+
+async function trackEvent(payload: {
+  eventName: string;
+  userKey: string;
+  props?: Record<string, any>;
+  experimentKey?: string;
+  variantKey?: string;
+}) {
+  try {
+    await fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "event",
+        eventName: payload.eventName,
+        userKey: payload.userKey,
+        props: payload.props ?? {},
+        experimentKey: payload.experimentKey ?? null,
+        variantKey: payload.variantKey ?? null,
+      }),
+    });
+  } catch {
+    // ignore
   }
 }
 
@@ -145,6 +201,9 @@ export default function Home() {
 
   // Quiz matchup card height (use dvh for iOS Safari)
   const CARD_H = "40dvh";
+
+  // Results-page A/B (only this test)
+  const SHARE_CTA_EXPERIMENT = "results_share_cta_v1";
 
   const [view, setView] = useState<View>("intro");
   const [lastNonGlobalView, setLastNonGlobalView] = useState<View>("intro");
@@ -172,6 +231,10 @@ export default function Home() {
 
   const [email, setEmail] = useState("");
   const [emailStatus, setEmailStatus] = useState<"idle" | "ok">("idle");
+
+  const [shareVariant, setShareVariant] = useState<"share_result" | "share_my_podium" | null>(null);
+  const [shareLabel, setShareLabel] = useState<string>("Share Result");
+  const [shareImpressionSent, setShareImpressionSent] = useState(false);
 
   const coverageMet = useMemo(() => {
     return teams.every((t) => (seenCounts[t.id] ?? 0) >= MIN_APPEARANCES_PER_TEAM);
@@ -223,14 +286,12 @@ export default function Home() {
 
     setLocked(true);
     setSelected(winner);
-    hapticTap();
 
     const top = teams[topIndex];
     const bottom = teams[bottomIndex];
     const winTeam = winner === "top" ? top : bottom;
 
     const nextResults: Matchup[] = [...results, { topId: top.id, bottomId: bottom.id, winnerId: winTeam.id }];
-
     const nextRatings = applyEloUpdate(ratings, top.id, bottom.id, winTeam.id, 32);
 
     const nextSeen: Record<number, number> = {
@@ -256,25 +317,47 @@ export default function Home() {
     }, REVEAL_MS);
   }
 
+  // Assign Results share CTA variant (deterministic)
+  useEffect(() => {
+    if (view !== "results") return;
+
+    const userKey = getOrCreateUserKey();
+
+    const v = assignVariant(userKey, SHARE_CTA_EXPERIMENT);
+    setShareVariant(v);
+    setShareLabel(v === "share_my_podium" ? "Share My Podium" : "Share Result");
+
+  }, [view]);
+
+  // Log Results primary share CTA impression (once)
+  useEffect(() => {
+    if (view !== "results") return;
+    if (!shareVariant) return;
+    if (shareImpressionSent) return;
+
+    const userKey = getOrCreateUserKey();
+
+    trackEvent({
+      eventName: "results_share_primary_impression",
+      userKey,
+      experimentKey: SHARE_CTA_EXPERIMENT,
+      variantKey: shareVariant,
+      props: {
+        categoryId: CATEGORY_ID_2026_LIVERIES,
+        top1Slug: sortedRanking?.[0]?.slug ?? null,
+      },
+    });
+
+    setShareImpressionSent(true);
+  }, [view, shareVariant, shareImpressionSent, sortedRanking, SHARE_CTA_EXPERIMENT]);
+
+  // Submit final ranking to Supabase when Results view shows
   useEffect(() => {
     if (view !== "results") return;
 
     const submit = async () => {
-      const userKey =
-        localStorage.getItem("rankf1_user") ??
-        (() => {
-          const k = makeUserKey();
-          localStorage.setItem("rankf1_user", k);
-          return k;
-        })();
-
-      const userToken =
-        localStorage.getItem("rankf1_token") ??
-        (() => {
-          localStorage.setItem("rankf1_token", userKey);
-          return userKey;
-        })();
-
+      const userKey = getOrCreateUserKey();
+      const userToken = getOrCreateUserToken(userKey);
       const rankingSlugs = sortedRanking.map((t) => t.slug);
 
       const res = await fetch("/api/submit", {
@@ -295,6 +378,7 @@ export default function Home() {
     submit();
   }, [view, sortedRanking]);
 
+  // Fetch % of fans who ranked your #1 as #1
   useEffect(() => {
     if (view !== "results") return;
 
@@ -324,7 +408,46 @@ export default function Home() {
     run();
   }, [view, sortedRanking]);
 
-  async function handleShare() {
+  async function handlePrimaryShare() {
+    const userKey = getOrCreateUserKey();
+
+    trackEvent({
+      eventName: "results_share_primary_click",
+      userKey,
+      experimentKey: SHARE_CTA_EXPERIMENT,
+      variantKey: shareVariant ?? undefined,
+      props: {
+        categoryId: CATEGORY_ID_2026_LIVERIES,
+        top1Slug: sortedRanking?.[0]?.slug ?? null,
+      },
+    });
+
+    const top1Local = sortedRanking?.[0];
+    const shareUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/?top=${encodeURIComponent(top1Local?.slug ?? "")}`
+        : "";
+
+    const text = top1Local ? `My #1 2026 F1 livery is ${top1Local.name}. What’s yours?` : "Rank the 2026 F1 liveries.";
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "RankF1", text, url: shareUrl });
+        return;
+      }
+    } catch {
+      // fall through
+    }
+
+    try {
+      await navigator.clipboard.writeText(`${text} ${shareUrl}`);
+    } catch {
+      // ignore
+    }
+  }
+
+  // Secondary share (existing button under rankings) stays as-is, no experiment logging
+  async function handleSecondaryShare() {
     const top1Local = sortedRanking?.[0];
     const shareUrl =
       typeof window !== "undefined"
@@ -444,85 +567,77 @@ export default function Home() {
           </div>
 
           <div className="w-full grid gap-3">
-          <button
-  type="button"
-  disabled={locked}
-  onClick={() => chooseWinner("top")}
-  style={{ height: CARD_H }}
-  className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${topRing} ${
-    locked ? "opacity-95" : "active:scale-[0.995]"
-  }`}
->
-  {/* IMAGE AREA */}
-  <div className="w-full h-full flex items-center justify-center">
-    <img
-      src={topTeam.imagePath}
-      alt={topTeam.name}
-      className="w-full h-auto max-h-full"
-      draggable={false}
-    />
-  </div>
+            <button
+              type="button"
+              disabled={locked}
+              onClick={() => chooseWinner("top")}
+              style={{ height: CARD_H }}
+              className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${topRing} ${
+                locked ? "opacity-95" : "active:scale-[0.995]"
+              }`}
+            >
+              <div className="w-full h-full flex items-center justify-center">
+                <img
+                  src={topTeam.imagePath}
+                  alt={topTeam.name}
+                  className="w-full h-auto max-h-full"
+                  draggable={false}
+                />
+              </div>
 
-  {/* DARK OVERLAY */}
-  <div className="absolute inset-0 bg-black/20" />
+              <div className="absolute inset-0 bg-black/20" />
 
-  {/* LOGO */}
-  <div className="absolute top-3 right-3 z-10">
-    <div className="rounded-xl border border-white/10 bg-black/35 backdrop-blur px-2 py-1">
-      <img
-        src={TEAM_LOGO[topTeam.slug] ?? ""}
-        alt={`${topTeam.name} logo`}
-        className="h-5 w-auto opacity-95"
-        draggable={false}
-      />
-    </div>
-  </div>
+              <div className="absolute top-3 right-3 z-10">
+                <div className="rounded-xl border border-white/10 bg-black/35 backdrop-blur px-2 py-1">
+                  <img
+                    src={TEAM_LOGO[topTeam.slug] ?? ""}
+                    alt={`${topTeam.name} logo`}
+                    className="h-5 w-auto opacity-95"
+                    draggable={false}
+                  />
+                </div>
+              </div>
 
-  {/* TEAM NAME */}
-  <div className="absolute bottom-3 left-3 text-white text-xl font-semibold drop-shadow-lg">
-    {topTeam.name}
-  </div>
-</button>
+              <div className="absolute bottom-3 left-3 text-white text-xl font-semibold drop-shadow-lg">
+                {topTeam.name}
+              </div>
+            </button>
 
             <button
-  type="button"
-  disabled={locked}
-  onClick={() => chooseWinner("bottom")}
-  style={{ height: CARD_H }}
-  className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${bottomRing} ${
-    locked ? "opacity-95" : "active:scale-[0.995]"
-  }`}
->
-  {/* 1) IMAGE AREA */}
-  <div className="w-full h-full flex items-center justify-center">
-    <img
-      src={bottomTeam.imagePath}
-      alt={bottomTeam.name}
-      className="w-full h-auto max-h-full"
-      draggable={false}
-    />
-  </div>
+              type="button"
+              disabled={locked}
+              onClick={() => chooseWinner("bottom")}
+              style={{ height: CARD_H }}
+              className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${bottomRing} ${
+                locked ? "opacity-95" : "active:scale-[0.995]"
+              }`}
+            >
+              <div className="w-full h-full flex items-center justify-center">
+                <img
+                  src={bottomTeam.imagePath}
+                  alt={bottomTeam.name}
+                  className="w-full h-auto max-h-full"
+                  draggable={false}
+                />
+              </div>
 
-  {/* 2) DARK OVERLAY */}
-  <div className="absolute inset-0 bg-black/20" />
+              <div className="absolute inset-0 bg-black/20" />
 
-  {/* 3) LOGO */}
-  <div className="absolute top-3 right-3 z-10">
-    <div className="rounded-xl border border-white/10 bg-black/35 backdrop-blur px-2 py-1">
-      <img
-        src={TEAM_LOGO[bottomTeam.slug] ?? ""}
-        alt={`${bottomTeam.name} logo`}
-        className="h-5 w-auto opacity-95"
-        draggable={false}
-      />
-    </div>
-  </div>
+              <div className="absolute top-3 right-3 z-10">
+                <div className="rounded-xl border border-white/10 bg-black/35 backdrop-blur px-2 py-1">
+                  <img
+                    src={TEAM_LOGO[bottomTeam.slug] ?? ""}
+                    alt={`${bottomTeam.name} logo`}
+                    className="h-5 w-auto opacity-95"
+                    draggable={false}
+                  />
+                </div>
+              </div>
 
-  {/* 4) TEAM NAME */}
-  <div className="absolute bottom-3 left-3 text-white text-xl font-semibold drop-shadow-lg">
-    {bottomTeam.name}
-  </div>
-</button>
+              <div className="absolute bottom-3 left-3 text-white text-xl font-semibold drop-shadow-lg">
+                {bottomTeam.name}
+              </div>
+            </button>
           </div>
         </div>
       )}
@@ -551,10 +666,11 @@ export default function Home() {
           </div>
 
           <div className="flex-1 min-h-0 flex flex-col gap-2">
+            {/* Winner card (no layout shift) */}
             <div
               className="relative overflow-hidden rounded-2xl border border-white/10"
               style={{
-                flex: "0 0 34%",
+                flex: "0 0 36%",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundImage: `
@@ -564,51 +680,59 @@ export default function Home() {
                 `,
               }}
             >
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_10%,rgba(255,255,255,0.06),rgba(0,0,0,0)_45%)]" />
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_10%,rgba(255,255,255,0.06),rgba(0,0,0,0)_45%)]" />
 
-              <div className="relative h-full p-3 flex gap-3">
-                <div className="flex-1 min-w-0 flex flex-col justify-between">
-                  <div>
-                    <div className="text-xs text-gray-300/90">Your #1</div>
-                    <div className="mt-1 text-2xl font-extrabold tracking-tight leading-none">{top1?.name ?? "—"}</div>
-                    <div className="mt-2 text-xs text-gray-300/80">{top1PctText}</div>
+{/* Winner image as subtle background */}
+<div className="absolute inset-0 opacity-[0.38] flex items-center justify-center">
+  <img
+    src={top1 ? getCarCutoutPath(top1.slug) : ""}
+    alt=""
+    className="w-full h-auto max-w-none"
+    draggable={false}
+    onError={(e) => {
+      const img = e.currentTarget;
+      if ((img as any).dataset?.fallbackDone) return;
+      (img as any).dataset.fallbackDone = "1";
+      img.src = top1?.imagePath ?? "";
+    }}
+  />
+</div>
+<div className="absolute inset-0 bg-black/40" />
 
-                    {top1Counts && top1Counts.total > 0 && (
-                      <div className="mt-1 text-[11px] text-gray-400">
-                        ({top1Counts.top} of {top1Counts.total})
-                      </div>
-                    )}
-                  </div>
+{/* Accent glow orb */}
+<div
+  className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full blur-2xl"
+  style={{ background: hexToRgba(accentHex, 0.35) }}
+/>
 
-                  <div className="flex items-center gap-2 pt-2">
-                    <button
-                      onClick={() => {
-                        const slug = top1?.slug ?? "";
-                        window.open(`/shop?team=${encodeURIComponent(slug)}`, "_blank", "noopener,noreferrer");
-                      }}
-                      className="px-3 py-2 rounded-xl text-sm font-semibold bg-white text-black hover:bg-white/90"
-                    >
-                      Shop {top1?.name ?? "Winner"} Merch
-                    </button>
-                  </div>
-                </div>
+<div className="relative h-full p-3 flex flex-col gap-3">
+  <div className="flex-1 min-w-0 flex flex-col justify-between">
+    <div>
+      <div className="text-xs text-gray-300/90">Your #1</div>
+      <div className="mt-1 text-2xl font-extrabold tracking-tight leading-none">{top1?.name ?? "—"}</div>
+      <div className="mt-2 text-xs text-gray-300/80">{top1PctText}</div>
 
-                <div className="w-[46%] h-full relative rounded-xl overflow-hidden border border-white/10">
-                  <img
-                    src={top1?.imagePath}
-                    alt={top1?.name ?? "Top"}
-                    className="absolute inset-0 w-full h-full object-contain bg-black"
-                    draggable={false}
-                  />
-                  <div className="absolute inset-0 bg-black/15" />
-                  <div
-                    className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full blur-2xl"
-                    style={{ background: hexToRgba(accentHex, 0.35) }}
-                  />
-                </div>
-              </div>
+    </div>
+    <div className="flex flex-col gap-2 pt-2">
+      <button
+        onClick={handlePrimaryShare}
+        className="inline-flex w-fit max-w-full items-center justify-center px-3 py-2.5 rounded-xl font-semibold bg-white text-black hover:bg-white/90 whitespace-nowrap"
+      >
+        {shareLabel}
+      </button>
+
+      <button
+        type="button"
+        className="inline-flex w-fit max-w-full items-center justify-center px-3 py-2.5 rounded-xl font-semibold bg-white/10 hover:bg-white/15 border border-white/10 text-white whitespace-nowrap"
+      >
+        Your #1 Team’s Gear →
+      </button>
+    </div>
+  </div>
+</div>
             </div>
 
+            {/* #2–#3 unchanged style */}
             <div className="grid grid-cols-2 gap-2" style={{ flex: "0 0 22%" }}>
               {[sortedRanking[1], sortedRanking[2]].map((t, i) => {
                 if (!t) return null;
@@ -656,8 +780,9 @@ export default function Home() {
               })}
             </div>
 
-            <div className="flex-1 min-h-0 grid grid-cols-2 gap-2">
-              <div className="rounded-2xl border border-white/10 bg-black/25 p-2.5 flex flex-col min-h-0">
+            {/* #4–#11 unchanged style */}
+            <div className="flex-1 min-h-0 grid grid-cols-2 gap-2 items-start">
+              <div className="rounded-2xl border border-white/10 bg-black/25 p-2.5">
                 <div className="text-xs text-gray-300/90 mb-2">4–7</div>
                 <div className="grid gap-1.5">
                   {sortedRanking.slice(3, 7).map((t, idx) => {
@@ -696,7 +821,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-black/25 p-2.5 flex flex-col min-h-0">
+              <div className="rounded-2xl border border-white/10 bg-black/25 p-2.5">
                 <div className="text-xs text-gray-300/90 mb-2">8–11</div>
                 <div className="grid gap-1.5">
                   {sortedRanking.slice(7, 11).map((t, idx) => {
@@ -735,10 +860,11 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Existing secondary actions + email capture stay below rankings */}
               <div className="col-span-2 rounded-2xl border border-white/10 bg-white/5 p-2.5">
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={handleShare}
+                    onClick={handleSecondaryShare}
                     className="px-3 py-2.5 rounded-xl font-semibold bg-white text-black hover:bg-white/90"
                   >
                     Share your results

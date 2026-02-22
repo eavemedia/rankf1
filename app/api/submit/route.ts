@@ -8,15 +8,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-async function getCountryCodeFromIP(ip: string | null) {
-  if (!ip) return null;
-
-  // Use Cloudflare header when deployed, otherwise fallback is null in dev
-  // If you’re not on Cloudflare yet, we’ll use a simple external lookup later.
-  // For now: return null in local dev.
-  return null;
-}
-
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -26,12 +17,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "bad_request" }, { status: 400 });
     }
 
-    const headers = new Headers(req.headers);
-    const ip =
-      headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      headers.get("x-real-ip");
-
-    const countryCode = await getCountryCodeFromIP(ip);
+    // Vercel automatically provides this header in production
+    const countryCode = req.headers.get("x-vercel-ip-country");
 
     const { error } = await supabase.rpc("submit_final_result_v2", {
       p_category_id: categoryId,
@@ -44,7 +31,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error }, { status: 400 });
     }
 
-    // store country code (separate update so we don’t touch your trigger)
+    // Update country_code if available (will be null locally)
     if (countryCode) {
       await supabase
         .from("final_results")
@@ -55,6 +42,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "server_error" }, { status: 500 });
+    return NextResponse.json(
+      { error: e?.message ?? "server_error" },
+      { status: 500 }
+    );
   }
 }
