@@ -22,7 +22,6 @@ const teams: Team[] = [
   { id: 11, name: "Haas", slug: "haas", imagePath: "/images/2026-liveries/haas.jpg" },
 ];
 
-// Official 2026 livery colors (hex)
 const TEAM_COLOR: Record<string, string> = {
   alpine: "#00A1E8",
   "aston-martin": "#229971",
@@ -375,10 +374,6 @@ export default function Home() {
   const top1PctText =
     top1Pct == null ? "Loading…" : `${Math.max(0, Math.round(top1Pct))}% of fans also ranked this #1`;
 
-  // Image fit: show full car (no cropping) + preserve the dark studio bg
-  const IMG_FIT = "object-contain bg-black";
-  const IMG_POS = "object-center"; // tweak to: object-[center_45%] if you want slightly higher
-
   return (
     <main className="min-h-[100dvh] bg-black text-white flex flex-col items-center justify-center px-2 pt-3 pb-3">
       {view === "intro" && (
@@ -444,21 +439,17 @@ export default function Home() {
             <div className="text-xs text-gray-500 mt-1">Tap your favorite (quick confirmation before next matchup)</div>
           </div>
 
-          <div className="w-full flex-1 grid gap-3" style={{ gridTemplateRows: "1fr 1fr" }}>
+          {/* Important: no fixed 1fr/1fr rows. Height comes from the image ratio */}
+          <div className="w-full grid gap-3">
             <button
               type="button"
               disabled={locked}
               onClick={() => chooseWinner("top")}
-              className={`relative w-full h-full overflow-hidden rounded-2xl shadow-xl transition ${topRing} ${
+              className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${topRing} ${
                 locked ? "opacity-95" : "active:scale-[0.995]"
               }`}
             >
-              <img
-                src={topTeam.imagePath}
-                alt={topTeam.name}
-                className={`absolute inset-0 h-full w-full ${IMG_FIT} ${IMG_POS}`}
-                draggable={false}
-              />
+              <img src={topTeam.imagePath} alt={topTeam.name} className="block w-full h-auto" draggable={false} />
               <div className="absolute inset-0 bg-black/20" />
 
               <div className="absolute top-3 right-3 z-10">
@@ -481,14 +472,14 @@ export default function Home() {
               type="button"
               disabled={locked}
               onClick={() => chooseWinner("bottom")}
-              className={`relative w-full h-full overflow-hidden rounded-2xl shadow-xl transition ${bottomRing} ${
+              className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${bottomRing} ${
                 locked ? "opacity-95" : "active:scale-[0.995]"
               }`}
             >
               <img
                 src={bottomTeam.imagePath}
                 alt={bottomTeam.name}
-                className={`absolute inset-0 h-full w-full ${IMG_FIT} ${IMG_POS}`}
+                className="block w-full h-auto"
                 draggable={false}
               />
               <div className="absolute inset-0 bg-black/20" />
@@ -555,9 +546,7 @@ export default function Home() {
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
                     <div className="text-xs text-gray-300/90">Your #1</div>
-                    <div className="mt-1 text-2xl font-extrabold tracking-tight leading-none">
-                      {top1?.name ?? "—"}
-                    </div>
+                    <div className="mt-1 text-2xl font-extrabold tracking-tight leading-none">{top1?.name ?? "—"}</div>
                     <div className="mt-2 text-xs text-gray-300/80">{top1PctText}</div>
 
                     {top1Counts && top1Counts.total > 0 && (
@@ -584,7 +573,7 @@ export default function Home() {
                   <img
                     src={top1?.imagePath}
                     alt={top1?.name ?? "Top"}
-                    className={`absolute inset-0 w-full h-full ${IMG_FIT} ${IMG_POS}`}
+                    className="absolute inset-0 w-full h-full object-contain bg-black"
                     draggable={false}
                   />
                   <div className="absolute inset-0 bg-black/15" />
@@ -632,7 +621,7 @@ export default function Home() {
                         <img
                           src={t.imagePath}
                           alt={t.name}
-                          className={`absolute inset-0 w-full h-full ${IMG_FIT} ${IMG_POS}`}
+                          className="absolute inset-0 w-full h-full object-contain bg-black"
                           draggable={false}
                         />
                         <div className="absolute inset-0 bg-black/18" />
