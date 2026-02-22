@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "RankF1",
   description: "Rank the 2026 Formula 1 liveries",
+  other: {
+    "impact-site-verification": "5929e33f-421d-48fe-832e-cce304a77683",
+  },
 };
 
 export default function RootLayout({
