@@ -189,9 +189,9 @@ async function trackEvent(payload: {
 }
 
 export default function Home() {
-  const TARGET_PICKS = 24;
-  const MAX_PICKS = 30;
-  const MIN_APPEARANCES_PER_TEAM = 3;
+  const TARGET_PICKS = 5;
+  const MAX_PICKS = 5;
+  const MIN_APPEARANCES_PER_TEAM = 0;
   const REVEAL_MS = 450;
 
   // Quiz matchup card height (use dvh for iOS Safari)
