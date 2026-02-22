@@ -444,71 +444,85 @@ export default function Home() {
           </div>
 
           <div className="w-full grid gap-3">
+          <button
+  type="button"
+  disabled={locked}
+  onClick={() => chooseWinner("top")}
+  style={{ height: CARD_H }}
+  className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${topRing} ${
+    locked ? "opacity-95" : "active:scale-[0.995]"
+  }`}
+>
+  {/* IMAGE AREA */}
+  <div className="w-full h-full flex items-center justify-center">
+    <img
+      src={topTeam.imagePath}
+      alt={topTeam.name}
+      className="w-full h-auto max-h-full"
+      draggable={false}
+    />
+  </div>
+
+  {/* DARK OVERLAY */}
+  <div className="absolute inset-0 bg-black/20" />
+
+  {/* LOGO */}
+  <div className="absolute top-3 right-3 z-10">
+    <div className="rounded-xl border border-white/10 bg-black/35 backdrop-blur px-2 py-1">
+      <img
+        src={TEAM_LOGO[topTeam.slug] ?? ""}
+        alt={`${topTeam.name} logo`}
+        className="h-5 w-auto opacity-95"
+        draggable={false}
+      />
+    </div>
+  </div>
+
+  {/* TEAM NAME */}
+  <div className="absolute bottom-3 left-3 text-white text-xl font-semibold drop-shadow-lg">
+    {topTeam.name}
+  </div>
+</button>
+
             <button
-              type="button"
-              disabled={locked}
-              onClick={() => chooseWinner("top")}
-              style={{ height: CARD_H }}
-              className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${topRing} ${
-                locked ? "opacity-95" : "active:scale-[0.995]"
-              }`}
-            >
-              <img
-                src={topTeam.imagePath}
-                alt={topTeam.name}
-                className="absolute inset-0 w-full h-full object-contain"
-                draggable={false}
-              />
-              <div className="absolute inset-0 bg-black/20" />
+  type="button"
+  disabled={locked}
+  onClick={() => chooseWinner("bottom")}
+  style={{ height: CARD_H }}
+  className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${bottomRing} ${
+    locked ? "opacity-95" : "active:scale-[0.995]"
+  }`}
+>
+  {/* 1) IMAGE AREA */}
+  <div className="w-full h-full flex items-center justify-center">
+    <img
+      src={bottomTeam.imagePath}
+      alt={bottomTeam.name}
+      className="w-full h-auto max-h-full"
+      draggable={false}
+    />
+  </div>
 
-              <div className="absolute top-3 right-3 z-10">
-                <div className="rounded-xl border border-white/10 bg-black/35 backdrop-blur px-2 py-1">
-                  <img
-                    src={TEAM_LOGO[topTeam.slug] ?? ""}
-                    alt={`${topTeam.name} logo`}
-                    className="h-5 w-auto opacity-95"
-                    draggable={false}
-                  />
-                </div>
-              </div>
+  {/* 2) DARK OVERLAY */}
+  <div className="absolute inset-0 bg-black/20" />
 
-              <div className="absolute bottom-3 left-3 text-white text-xl font-semibold drop-shadow-lg">
-                {topTeam.name}
-              </div>
-            </button>
+  {/* 3) LOGO */}
+  <div className="absolute top-3 right-3 z-10">
+    <div className="rounded-xl border border-white/10 bg-black/35 backdrop-blur px-2 py-1">
+      <img
+        src={TEAM_LOGO[bottomTeam.slug] ?? ""}
+        alt={`${bottomTeam.name} logo`}
+        className="h-5 w-auto opacity-95"
+        draggable={false}
+      />
+    </div>
+  </div>
 
-            <button
-              type="button"
-              disabled={locked}
-              onClick={() => chooseWinner("bottom")}
-              style={{ height: CARD_H }}
-              className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${bottomRing} ${
-                locked ? "opacity-95" : "active:scale-[0.995]"
-              }`}
-            >
-              <img
-                src={bottomTeam.imagePath}
-                alt={bottomTeam.name}
-                className="absolute inset-0 w-full h-full object-contain"
-                draggable={false}
-              />
-              <div className="absolute inset-0 bg-black/20" />
-
-              <div className="absolute top-3 right-3 z-10">
-                <div className="rounded-xl border border-white/10 bg-black/35 backdrop-blur px-2 py-1">
-                  <img
-                    src={TEAM_LOGO[bottomTeam.slug] ?? ""}
-                    alt={`${bottomTeam.name} logo`}
-                    className="h-5 w-auto opacity-95"
-                    draggable={false}
-                  />
-                </div>
-              </div>
-
-              <div className="absolute bottom-3 left-3 text-white text-xl font-semibold drop-shadow-lg">
-                {bottomTeam.name}
-              </div>
-            </button>
+  {/* 4) TEAM NAME */}
+  <div className="absolute bottom-3 left-3 text-white text-xl font-semibold drop-shadow-lg">
+    {bottomTeam.name}
+  </div>
+</button>
           </div>
         </div>
       )}
