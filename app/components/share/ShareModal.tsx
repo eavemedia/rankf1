@@ -251,16 +251,35 @@ export default function ShareModal(props: Props) {
               </div>
             </div>
           ) : (
-            <div className="grid gap-2">
-              <div className="text-sm text-gray-300">
-                Image share coming next. This will generate a 1080×1920 story
-                image using your car cutouts.
-              </div>
+            <div className="grid gap-4">
+  <div className="text-sm text-gray-300">
+    Download a shareable story image.
+  </div>
 
-              <div className="text-xs text-gray-500">
-                Winner: {winnerName ?? "—"} · {top1PctText}
-              </div>
-            </div>
+  <button
+    onClick={() => {
+      trackEvent({
+        eventName: "share_download_image",
+        userKey,
+        experimentKey,
+        variantKey,
+        props: {
+          winner_team: winnerSlug ?? null,
+          country_code: countryCode ?? null,
+        },
+      });
+
+      alert("Image generation coming next step.");
+    }}
+    className="px-3 py-2.5 rounded-xl font-semibold bg-white text-black hover:bg-white/90"
+  >
+    Download Image
+  </button>
+
+  <div className="text-xs text-gray-500">
+    Winner: {winnerName ?? "—"} · {top1PctText}
+  </div>
+</div>
           )}
         </div>
 
