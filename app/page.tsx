@@ -848,7 +848,7 @@ export default function Home() {
               <div className="col-span-2 rounded-2xl border border-white/10 bg-white/5 p-2.5">
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={handleSecondaryShare}
+                      onClick={handlePrimaryShare}
                     className="px-3 py-2.5 rounded-xl font-semibold bg-white text-black hover:bg-white/90"
                   >
                     Share your results
