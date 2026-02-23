@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import ShareModal from "@/app/components/share/ShareModal";
 
 type Team = { id: number; name: string; slug: string; imagePath: string };
 type Matchup = { topId: number; bottomId: number; winnerId: number };
@@ -50,6 +51,8 @@ const TEAM_LOGO: Record<string, string> = {
   "red-bull": "/images/logos/2026redbullracinglogowhite.avif",
   williams: "/images/logos/2026williamslogowhite.avif",
 };
+
+const SHARE_DEFAULT_MODE_EXPERIMENT = "share_modal_layout";
 
 function makeUserKey() {
   if (typeof crypto !== "undefined" && (crypto as any).randomUUID) {
@@ -147,7 +150,6 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-
 // Deterministic 50/50 assignment from userKey + experimentKey (no WebCrypto needed)
 function assignVariant(userKey: string, experimentKey: string) {
   const s = `${experimentKey}:${userKey}`;
@@ -161,6 +163,20 @@ function assignVariant(userKey: string, experimentKey: string) {
 
   const bucket = (h >>> 0) % 2;
   return bucket === 0 ? "share_result" : "share_my_podium";
+}
+
+function assignVariantAB(userKey: string, experimentKey: string): "A" | "B" {
+  const s = `${experimentKey}:${userKey}`;
+
+  // FNV-1a 32-bit hash
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+
+  const bucket = (h >>> 0) % 2;
+  return bucket === 0 ? "A" : "B";
 }
 
 async function trackEvent(payload: {
@@ -189,9 +205,9 @@ async function trackEvent(payload: {
 }
 
 export default function Home() {
-  const TARGET_PICKS = 24;
-  const MAX_PICKS = 30;
-  const MIN_APPEARANCES_PER_TEAM = 3;
+  const TARGET_PICKS = 2;
+  const MAX_PICKS = 2;
+  const MIN_APPEARANCES_PER_TEAM = 0;
   const REVEAL_MS = 450;
 
   // Quiz matchup card height (use dvh for iOS Safari)
@@ -230,6 +246,10 @@ export default function Home() {
   const [shareVariant, setShareVariant] = useState<"share_result" | "share_my_podium" | null>(null);
   const [shareLabel, setShareLabel] = useState<string>("Share Result");
   const [shareImpressionSent, setShareImpressionSent] = useState(false);
+
+  // New: Share system
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareDefaultVariant, setShareDefaultVariant] = useState<"A" | "B">("A");
 
   const coverageMet = useMemo(() => {
     return teams.every((t) => (seenCounts[t.id] ?? 0) >= MIN_APPEARANCES_PER_TEAM);
@@ -321,7 +341,15 @@ export default function Home() {
     const v = assignVariant(userKey, SHARE_CTA_EXPERIMENT);
     setShareVariant(v);
     setShareLabel(v === "share_my_podium" ? "Share My Podium" : "Share Result");
+  }, [view]);
 
+  // Assign new Share default mode variant (deterministic)
+  useEffect(() => {
+    if (view !== "results") return;
+
+    const userKey = getOrCreateUserKey();
+    const v = assignVariantAB(userKey, SHARE_DEFAULT_MODE_EXPERIMENT);
+    setShareDefaultVariant(v);
   }, [view]);
 
   // Log Results primary share CTA impression (once)
@@ -417,28 +445,7 @@ export default function Home() {
       },
     });
 
-    const top1Local = sortedRanking?.[0];
-    const shareUrl =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/?top=${encodeURIComponent(top1Local?.slug ?? "")}`
-        : "";
-
-    const text = top1Local ? `My #1 2026 F1 livery is ${top1Local.name}. What’s yours?` : "Rank the 2026 F1 liveries.";
-
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "RankF1", text, url: shareUrl });
-        return;
-      }
-    } catch {
-      // fall through
-    }
-
-    try {
-      await navigator.clipboard.writeText(`${text} ${shareUrl}`);
-    } catch {
-      // ignore
-    }
+    setShareModalOpen(true);
   }
 
   // Secondary share (existing button under rankings) stays as-is, no experiment logging
@@ -572,12 +579,7 @@ export default function Home() {
               }`}
             >
               <div className="w-full h-full flex items-center justify-center">
-                <img
-                  src={topTeam.imagePath}
-                  alt={topTeam.name}
-                  className="w-full h-auto max-h-full"
-                  draggable={false}
-                />
+                <img src={topTeam.imagePath} alt={topTeam.name} className="w-full h-auto max-h-full" draggable={false} />
               </div>
 
               <div className="absolute inset-0 bg-black/20" />
@@ -593,9 +595,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="absolute bottom-3 left-3 text-white text-xl font-semibold drop-shadow-lg">
-                {topTeam.name}
-              </div>
+              <div className="absolute bottom-3 left-3 text-white text-xl font-semibold drop-shadow-lg">{topTeam.name}</div>
             </button>
 
             <button
@@ -675,50 +675,45 @@ export default function Home() {
                 `,
               }}
             >
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_10%,rgba(255,255,255,0.06),rgba(0,0,0,0)_45%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_10%,rgba(255,255,255,0.06),rgba(0,0,0,0)_45%)]" />
 
-{/* Winner image as subtle background */}
-<div className="absolute inset-0 opacity-[0.38] flex items-center justify-center">
-<img
-  src={top1?.imagePath ?? ""}
-  alt=""
-  className="w-full h-auto max-w-none"
-  draggable={false}
-/>
-</div>
-<div className="absolute inset-0 bg-black/40" />
+              {/* Winner image as subtle background */}
+              <div className="absolute inset-0 opacity-[0.38] flex items-center justify-center">
+                <img src={top1?.imagePath ?? ""} alt="" className="w-full h-auto max-w-none" draggable={false} />
+              </div>
+              <div className="absolute inset-0 bg-black/40" />
 
-{/* Accent glow orb */}
-<div
-  className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full blur-2xl"
-  style={{ background: hexToRgba(accentHex, 0.35) }}
-/>
+              {/* Accent glow orb */}
+              <div
+                className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full blur-2xl"
+                style={{ background: hexToRgba(accentHex, 0.35) }}
+              />
 
-<div className="relative h-full p-3 flex flex-col gap-3">
-  <div className="flex-1 min-w-0 flex flex-col justify-between">
-    <div>
-      <div className="text-xs text-gray-300/90">Your #1</div>
-      <div className="mt-1 text-2xl font-extrabold tracking-tight leading-none">{top1?.name ?? "—"}</div>
-      <div className="mt-2 text-xs text-gray-300/80">{top1PctText}</div>
+              <div className="relative h-full p-3 flex flex-col gap-3">
+                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                  <div>
+                    <div className="text-xs text-gray-300/90">Your #1</div>
+                    <div className="mt-1 text-2xl font-extrabold tracking-tight leading-none">{top1?.name ?? "—"}</div>
+                    <div className="mt-2 text-xs text-gray-300/80">{top1PctText}</div>
+                  </div>
 
-    </div>
-    <div className="flex flex-col gap-2 pt-2">
-      <button
-        onClick={handlePrimaryShare}
-        className="inline-flex w-fit max-w-full items-center justify-center px-3 py-2.5 rounded-xl font-semibold bg-white text-black hover:bg-white/90 whitespace-nowrap"
-      >
-        {shareLabel}
-      </button>
+                  <div className="flex flex-col gap-2 pt-2">
+                    <button
+                      onClick={handlePrimaryShare}
+                      className="inline-flex w-fit max-w-full items-center justify-center px-3 py-2.5 rounded-xl font-semibold bg-white text-black hover:bg-white/90 whitespace-nowrap"
+                    >
+                      {shareLabel}
+                    </button>
 
-      <button
-        type="button"
-        className="inline-flex w-fit max-w-full items-center justify-center px-3 py-2.5 rounded-xl font-semibold bg-white/10 hover:bg-white/15 border border-white/10 text-white whitespace-nowrap"
-      >
-        Your #1 Team’s Gear →
-      </button>
-    </div>
-  </div>
-</div>
+                    <button
+                      type="button"
+                      className="inline-flex w-fit max-w-full items-center justify-center px-3 py-2.5 rounded-xl font-semibold bg-white/10 hover:bg-white/15 border border-white/10 text-white whitespace-nowrap"
+                    >
+                      Your #1 Team’s Gear →
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* #2–#3 unchanged style */}
@@ -887,6 +882,19 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          <ShareModal
+            open={shareModalOpen}
+            onClose={() => setShareModalOpen(false)}
+            rankingNames={sortedRanking.map((t) => t.name)}
+            winnerSlug={top1?.slug ?? null}
+            winnerName={top1?.name ?? null}
+            top1PctText={top1PctText}
+            userKey={getOrCreateUserKey()}
+            experimentKey={SHARE_DEFAULT_MODE_EXPERIMENT}
+            variantKey={shareDefaultVariant}
+            trackEvent={trackEvent}
+          />
         </div>
       )}
     </main>
