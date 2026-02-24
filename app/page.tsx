@@ -718,16 +718,7 @@ export default function Home() {
               )}
             </div>
 
-            {results.length > 0 && (
-              <div className="mt-5">
-                <button
-                  onClick={() => setView("results")}
-                  className="w-full px-4 py-3 rounded-xl font-semibold bg-white/10 hover:bg-white/15 border border-white/10"
-                >
-                  Back to your results
-                </button>
-              </div>
-            )}
+            
           </div>
 
           <div className="flex-1 flex items-start pt-.5">
