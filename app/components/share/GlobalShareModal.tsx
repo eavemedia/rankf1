@@ -1,27 +1,22 @@
 "use client";
 
-import { renderStoryImage } from "@/app/components/share/renderStoryImage";
-import { useEffect, useMemo, useState } from "react";
-
+import { useMemo, useState } from "react";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  rankingNames: string[];
-  winnerSlug: string | null;
-  winnerName: string | null;
-  top1PctText: string;
+  rankingNames: string[]; // expects 1–11 in order
   userKey: string;
-  experimentKey: string;
-  variantKey: "A" | "B";
-  trackEvent: (p: {
+
+  trackEvent?: (p: {
     eventName: string;
     userKey: string;
     props?: Record<string, any>;
     experimentKey?: string;
     variantKey?: string;
   }) => void;
-  countryCode?: string | null;
+
+  
 };
 
 function clamp11(names: string[]) {
@@ -30,49 +25,26 @@ function clamp11(names: string[]) {
   return copy.slice(0, 11);
 }
 
-function buildTextShare(rank1: string, rank2: string, rank3: string) {
-  return `My 2026 Livery Podium 🏁
-🥇 ${rank1}
-🥈 ${rank2}
-🥉 ${rank3}
+function buildGlobalTextShare(names11: string[]) {
+  const lines = names11.map((name, i) => `${i + 1}. ${name}`).join("\n");
 
-Build yours →
+  return `Global 2026 Livery Leaderboard 🏁
+${lines}
+
+Rank yours →
 rankf1.com`;
 }
 
-export default function ShareModal(props: Props) {
-  const {
-    open,
-    onClose,
-    rankingNames,
-    winnerSlug,
-    winnerName,
-    top1PctText,
-    userKey,
-    experimentKey,
-    variantKey,
-    trackEvent,
-    countryCode,
-  } = props;
-
+export default function GlobalShareModal(props: Props) {
+    const { open, onClose, rankingNames, userKey, trackEvent } = props;
   const ranking = useMemo(() => clamp11(rankingNames), [rankingNames]);
-
+  const textShare = useMemo(() => buildGlobalTextShare(ranking), [ranking]);
 
   const [copied, setCopied] = useState(false);
 
-  
-
-  const textShare = useMemo(
-    () => buildTextShare(ranking[0], ranking[1], ranking[2]),
-    [ranking]
-  );
-
- 
-
   async function copyText() {
     let ok = false;
-  
-    // Try modern clipboard first
+
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(textShare);
@@ -81,64 +53,46 @@ export default function ShareModal(props: Props) {
     } catch {
       // fall through
     }
-  
-    // Fallback for iOS / restricted contexts
+
     if (!ok) {
       try {
         const ta = document.createElement("textarea");
         ta.value = textShare;
-  
-        // Prevent zoom on iOS and keep it off-screen
         ta.style.position = "fixed";
         ta.style.top = "-1000px";
         ta.style.left = "-1000px";
         ta.style.opacity = "0";
         ta.setAttribute("readonly", "");
-  
         document.body.appendChild(ta);
         ta.select();
         ta.setSelectionRange(0, ta.value.length);
-  
         ok = document.execCommand("copy");
         document.body.removeChild(ta);
       } catch {
         ok = false;
       }
     }
-  
-    // Track either way (attempt happened)
-    trackEvent({
-      eventName: "share_copy_text",
-      userKey,
-      experimentKey,
-      variantKey,
-      props: {
-        winner_team: winnerSlug ?? null,
-        country_code: countryCode ?? null,
-        ok,
-      },
-    });
-  
+
+    trackEvent?.({
+        eventName: "global_share_copy_text",
+        userKey,
+        props: { ok },
+      });
+
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1200);
-  
+
     if (!ok) {
       alert("Couldn’t auto-copy. Tap and hold the text to copy it.");
     }
   }
 
   async function openShareSheetForText() {
-    trackEvent({
-      eventName: "share_sheet_opened",
-      userKey,
-      experimentKey,
-      variantKey,
-      props: {
-        mode: "text",
-        winner_team: winnerSlug ?? null,
-        country_code: countryCode ?? null,
-      },
-    });
+    trackEvent?.({
+        eventName: "global_share_sheet_opened",
+        userKey,
+        props: { mode: "text" },
+      });
 
     if (!navigator.share) {
       await copyText();
@@ -147,61 +101,41 @@ export default function ShareModal(props: Props) {
     }
 
     try {
-      await navigator.share({
-        title: "RankF1",
-        text: textShare,
-        url: "https://rankf1.com",
-      });
-
-      trackEvent({
-        eventName: "share_success",
-        userKey,
-        experimentKey,
-        variantKey,
-        props: {
-          mode: "text",
-          winner_team: winnerSlug ?? null,
-          country_code: countryCode ?? null,
-        },
-      });
-    } catch (err: any) {
-      const isCancel =
-        err?.name === "AbortError" ||
-        String(err?.message ?? "").toLowerCase().includes("abort");
-
-      if (isCancel) {
-        trackEvent({
-          eventName: "share_cancel",
-          userKey,
-          experimentKey,
-          variantKey,
-          props: {
-            mode: "text",
-            winner_team: winnerSlug ?? null,
-            country_code: countryCode ?? null,
-          },
+        await navigator.share({
+          title: "RankF1",
+          text: textShare,
+          url: "https://rankf1.com",
         });
-        return;
+  
+        trackEvent?.({
+          eventName: "global_share_success",
+          userKey,
+          props: { mode: "text" },
+        });
+      } catch (err: any) {
+        const isCancel =
+          err?.name === "AbortError" ||
+          String(err?.message ?? "").toLowerCase().includes("abort");
+  
+        if (isCancel) {
+          trackEvent?.({
+            eventName: "global_share_cancel",
+            userKey,
+            props: { mode: "text" },
+          });
+          return;
+        }
+  
+        trackEvent?.({
+          eventName: "global_share_failed",
+          userKey,
+          props: { mode: "text" },
+        });
+  
+        await copyText();
+        alert("Share failed. I copied the text instead.");
       }
-
-      trackEvent({
-        eventName: "share_failed",
-        userKey,
-        experimentKey,
-        variantKey,
-        props: {
-          mode: "text",
-          winner_team: winnerSlug ?? null,
-          country_code: countryCode ?? null,
-        },
-      });
-
-      await copyText();
-      alert("Share failed. I copied the text instead.");
-    }
   }
-
-
 
   if (!open) return null;
 
@@ -250,5 +184,4 @@ export default function ShareModal(props: Props) {
       </div>
     </div>
   );
-
 }

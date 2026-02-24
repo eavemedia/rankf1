@@ -23,12 +23,23 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Missing fields" }, { status: 400 });
       }
 
+      const h = req.headers;
+      const countryCode =
+        h.get("x-vercel-ip-country") ||
+        h.get("cf-ipcountry") ||
+        null;
+
+      const mergedProps = {
+        ...(props ?? {}),
+        country_code: countryCode,
+      };
+
       const { error } = await supabase
         .from("events")
         .insert({
           event_name: eventName,
           user_key: userKey,
-          props: props ?? {},
+          props: mergedProps,
           experiment_key: experimentKey ?? null,
           variant_key: variantKey ?? null,
         });

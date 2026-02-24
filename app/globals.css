@@ -24,3 +24,23 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* RankF1 subtle entrance */
+@keyframes rf1FadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rf1-fade-up {
+  opacity: 0;
+  animation-name: rf1FadeUp;
+  animation-duration: 260ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}

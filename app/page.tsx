@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ShareModal from "@/app/components/share/ShareModal";
+import GlobalShareModal from "@/app/components/share/GlobalShareModal";
 
 type Team = { id: number; name: string; slug: string; imagePath: string };
 type Matchup = { topId: number; bottomId: number; winnerId: number };
@@ -247,9 +248,17 @@ export default function Home() {
   const [shareLabel, setShareLabel] = useState<string>("Share Result");
   const [shareImpressionSent, setShareImpressionSent] = useState(false);
 
-  // New: Share system
-  const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [shareDefaultVariant, setShareDefaultVariant] = useState<"A" | "B">("A");
+   // New: Share system
+   const [shareModalOpen, setShareModalOpen] = useState(false);
+   const [shareDefaultVariant, setShareDefaultVariant] = useState<"A" | "B">("A");
+ 
+   // Global share modal
+   const [globalShareOpen, setGlobalShareOpen] = useState(false);
+
+  // Global leaderboard
+  const [globalLoading, setGlobalLoading] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [globalRows, setGlobalRows] = useState<Array<{ slug: string; points: number; pct1: number }> | null>(null);
 
   const coverageMet = useMemo(() => {
     return teams.every((t) => (seenCounts[t.id] ?? 0) >= MIN_APPEARANCES_PER_TEAM);
@@ -431,6 +440,45 @@ export default function Home() {
     run();
   }, [view, sortedRanking]);
 
+  // Fetch Global Leaderboard (pct picked #1 per team)
+  useEffect(() => {
+    if (view !== "global") return;
+
+    setGlobalLoading(true);
+    setGlobalError(null);
+    setGlobalRows(null);
+
+    const run = async () => {
+      try {
+        const res = await fetch(
+          `/api/global-leaderboard?categoryId=${encodeURIComponent(CATEGORY_ID_2026_LIVERIES)}`
+        );
+        const json = await res.json();
+        if (!json?.ok) {
+          setGlobalError(json?.error ?? "Failed to load global leaderboard");
+          setGlobalLoading(false);
+          return;
+        }
+
+        const rows = Array.isArray(json.rows) ? json.rows : [];
+        setGlobalRows(
+          rows.map((r: any) => ({
+            slug: String(r.slug),
+            points: typeof r.points === "number" ? r.points : Number(r.points ?? 0),
+            pct1: typeof r.pct_picked_1 === "number" ? r.pct_picked_1 : Number(r.pct_picked_1 ?? 0),
+          }))
+        );
+
+      } catch {
+        setGlobalError("Failed to load global leaderboard");
+      } finally {
+        setGlobalLoading(false);
+      }
+    };
+
+    run();
+  }, [view]);
+
   async function handlePrimaryShare() {
     const userKey = getOrCreateUserKey();
 
@@ -504,7 +552,7 @@ export default function Home() {
     top1Pct == null ? "Loading…" : `${Math.max(0, Math.round(top1Pct))}% of fans also ranked this #1`;
 
   return (
-    <main className="min-h-[100dvh] bg-black text-white flex flex-col items-center justify-center px-2 pt-3 pb-3">
+    <main className="min-h-[100dvh] bg-black text-white flex flex-col items-center px-2 pt-1 pb-2">
       {view === "intro" && (
         <div className="w-full max-w-lg flex-1 flex items-center justify-center">
           <div className="w-full bg-gray-900/70 border border-gray-800 rounded-2xl p-6 text-center">
@@ -532,17 +580,142 @@ export default function Home() {
         </div>
       )}
 
-      {view === "global" && (
-        <div className="w-full max-w-lg flex-1 flex flex-col justify-center">
+{view === "global" && (
+        <div key="global" className="w-full max-w-lg flex flex-col min-h-[100dvh]">
           <div className="bg-gray-900/70 border border-gray-800 rounded-2xl p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-bold">Global Results</h2>
-                <p className="text-gray-400 mt-2">We’ll show the live leaderboard here next.</p>
-              </div>
-              <button onClick={backFromGlobal} className="px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl text-sm">
-                Back
-              </button>
+            <div className="text-center mb-0 -mt-4">
+              <img
+                src="/images/RankF1_logo_web.png"
+                alt="RankF1.com"
+                className="w-full max-w-xs mx-auto"
+                draggable={false}
+              />
+              <div className="text-lg font-semibold mt-.5">Global Leaderboard</div>
+            </div>
+
+            <div className="mt-1 text-center">
+              <div className="text-gray-400 text-sm">Percent of fans who picked each car #1</div>
+            </div>
+
+            <div className="mt-3">
+              {globalLoading && (
+                <div className="rounded-2xl border border-white/10 bg-black/25 p-3 text-sm text-gray-300">
+                  Loading…
+                </div>
+              )}
+
+              {!globalLoading && globalError && (
+                <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+                  {globalError}
+                </div>
+              )}
+
+              {!globalLoading && !globalError && globalRows && globalRows.length > 0 && (
+                <div className="grid gap-2">
+                  {(() => {
+                    const topRow = globalRows[0];
+                    const topTeam = teams.find((x) => x.slug === topRow.slug);
+                    if (!topTeam) return null;
+
+                    const c = TEAM_COLOR[topTeam.slug] ?? "#ffffff";
+                    const glowA = hexToRgba(c, 0.42);
+                    const glowB = hexToRgba(c, 0.14);
+
+                    return (
+                      <div
+                        className="relative overflow-hidden rounded-2xl border border-white/10 py-1 rf1-fade-up"
+                        style={{
+                          animationDelay: "0ms",
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                          backgroundImage: `
+                            radial-gradient(700px 280px at 20% 20%, ${glowA} 0%, rgba(0,0,0,0) 60%),
+                            radial-gradient(520px 240px at 85% 40%, ${glowB} 0%, rgba(0,0,0,0) 62%),
+                            linear-gradient(180deg, rgba(10,10,10,0.82) 0%, rgba(0,0,0,0.92) 100%)
+                          `,
+                        }}
+                      >
+                        <div className="absolute inset-0 opacity-[0.42] flex items-center justify-center">
+                          <img src={topTeam.imagePath} alt="" className="w-full h-auto max-w-none" draggable={false} />
+                        </div>
+                        <div className="absolute inset-0 bg-black/45" />
+
+                        <div className="relative p-2.5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="text-xs text-gray-300/90">Global #1</div>
+                              <div className="mt-1 text-2xl font-extrabold tracking-tight leading-none">
+                                {topTeam.name}
+                              </div>
+                              <div className="mt-2 text-xs text-gray-300/80">
+                                {Math.max(0, Math.round(topRow.pct1))}% of fans picked this #1
+                              </div>
+                            </div>
+
+                            <div className="h-8 w-20 flex items-center justify-end">
+                              <img
+                                src={TEAM_LOGO[topTeam.slug] ?? ""}
+                                alt={`${topTeam.name} logo`}
+                                className="h-6 w-auto opacity-90"
+                                draggable={false}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="grid gap-1.5">
+                    {globalRows.slice(1).map((row, idx) => {
+                      const t = teams.find((x) => x.slug === row.slug);
+                      if (!t) return null;
+
+                      const rank = idx + 2;
+                      const c = TEAM_COLOR[t.slug] ?? "#ffffff";
+                      const glowA = hexToRgba(c, 0.16);
+                      const glowB = hexToRgba(c, 0.08);
+
+                      return (
+                        <div
+                          key={t.slug}
+                          className="relative overflow-hidden rounded-xl border border-white/10 px-2.5 py-1.5 rf1-fade-up"
+                          style={{
+                            animationDelay: `${(idx + 1) * 22}ms`,
+                            backgroundImage: `
+                              radial-gradient(420px 160px at 12% 35%, ${glowA} 0%, rgba(0,0,0,0) 62%),
+                              radial-gradient(360px 150px at 88% 40%, ${glowB} 0%, rgba(0,0,0,0) 64%),
+                              linear-gradient(180deg, rgba(16,16,16,0.72) 0%, rgba(0,0,0,0.78) 100%)
+                            `,
+                          }}
+                        >
+                          <div className="relative flex items-center justify-center">
+                            <div className="absolute left-0 flex items-center gap-2">
+                              <div className="w-6 text-[11px] text-gray-300 tabular-nums">{rank}</div>
+                              <div className="h-6 w-14 flex items-center justify-start">
+                                <img
+                                  src={TEAM_LOGO[t.slug] ?? ""}
+                                  alt={`${t.name} logo`}
+                                  className="h-4.5 w-auto opacity-90"
+                                  draggable={false}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="text-[15px] font-medium leading-none truncate text-center px-16">
+                              {t.name}
+                            </div>
+
+                            <div className="absolute right-0 text-sm font-semibold tabular-nums">
+                              {Math.max(0, Math.round(row.pct1))}%
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {results.length > 0 && (
@@ -556,6 +729,42 @@ export default function Home() {
               </div>
             )}
           </div>
+
+          <div className="flex-1 flex items-start pt-.5">
+            <div className="w-full max-w-lg mt-2 grid grid-cols-2 gap-2">
+            <button
+  onClick={() => {
+    const userKey = getOrCreateUserKey();
+
+    trackEvent({
+      eventName: "global_share_opened",
+      userKey,
+      props: {},
+    });
+
+    setGlobalShareOpen(true);
+  }}
+  className="px-3 py-2 rounded-xl font-semibold bg-white text-black hover:bg-white/90"
+>
+  Share
+</button>
+
+              <button
+                onClick={backFromGlobal}
+                className="px-3 py-2 rounded-xl font-semibold bg-white/10 hover:bg-white/15 border border-white/10"
+              >
+                Back
+              </button>
+            </div>
+          </div>
+
+          <GlobalShareModal
+            open={globalShareOpen}
+            onClose={() => setGlobalShareOpen(false)}
+            rankingNames={(globalRows ?? []).map((r) => teams.find((t) => t.slug === r.slug)?.name ?? "—")}
+            userKey={getOrCreateUserKey()}
+            trackEvent={trackEvent}
+          />
         </div>
       )}
 
