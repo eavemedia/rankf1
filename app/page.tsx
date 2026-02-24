@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ShareModal from "@/app/components/share/ShareModal";
 import GlobalShareModal from "@/app/components/share/GlobalShareModal";
+import QuizIntroOverlay from "@/app/components/QuizIntroOverlay";
 
 type Team = { id: number; name: string; slug: string; imagePath: string };
 type Matchup = { topId: number; bottomId: number; winnerId: number };
@@ -254,6 +255,12 @@ export default function Home() {
  
    // Global share modal
    const [globalShareOpen, setGlobalShareOpen] = useState(false);
+// Intro Animation
+
+   const [introActive, setIntroActive] = useState(false);
+   const [introRunKey, setIntroRunKey] = useState(0);
+   const topBtnRef = useRef<HTMLButtonElement | null>(null);
+   const bottomBtnRef = useRef<HTMLButtonElement | null>(null);
 
   // Global leaderboard
   const [globalLoading, setGlobalLoading] = useState(false);
@@ -322,10 +329,25 @@ export default function Home() {
     setBottomIndex(nextMatch.bottomIndex);
   
     setViewSafe("rank");
+    // force intro every time
+setIntroRunKey((k) => k + 1);
+setIntroActive(true);
+
+window.setTimeout(() => {
+  setIntroActive(false);
+}, 7250);
   }
 
   function startRanking() {
     setViewSafe("rank");
+  
+    // force intro every time
+    setIntroRunKey((k) => k + 1);
+    setIntroActive(true);
+  
+    window.setTimeout(() => {
+      setIntroActive(false);
+    }, 7250);
   }
 
   function showGlobal() {
@@ -345,6 +367,7 @@ export default function Home() {
   }
 
   function chooseWinner(winner: "top" | "bottom") {
+    if (introActive) return;
     if (done) return;
     if (locked) return;
 
@@ -799,25 +822,44 @@ export default function Home() {
         </div>
       )}
 
-      {view === "rank" && (
-        <div className="w-full max-w-lg flex flex-col">
-          <div className="text-center shrink-0 pb-2">
-            <div className="text-sm text-gray-400">
-              Picks: {results.length} (target {TARGET_PICKS}, cap {MAX_PICKS})
-            </div>
-            <div className="text-xs text-gray-500 mt-1">Tap your favorite (quick confirmation before next matchup)</div>
-          </div>
+{view === "rank" && (
+  <div className="w-full max-w-lg flex-1 flex flex-col justify-center">
+         <div className="text-center shrink-0 -mt-4 pb-1">
+         <button
+  type="button"
+  onClick={backToIntro}
+  className="mx-auto block"
+>
+  <img
+    src="/images/RankF1_logo_web.png"
+    alt="RankF1.com"
+    className="w-55 mx-auto mb-1"
+    draggable={false}
+  />
+</button>
 
-          <div className="w-full grid gap-3">
-            <button
-              type="button"
-              disabled={locked}
-              onClick={() => chooseWinner("top")}
-              style={{ height: CARD_H }}
-              className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${topRing} ${
-                locked ? "opacity-95" : "active:scale-[0.995]"
-              }`}
-            >
+  <div className="text-sm text-gray-300">
+    Tap your favorite
+  </div>
+
+  <div className="text-xs text-gray-500 mt-0.5">
+    {TARGET_PICKS - results.length} picks left
+  </div>
+</div>
+
+<div className="relative w-full mt-1">
+  <div className="w-full grid gap-3">
+  <button
+  ref={topBtnRef}
+  data-intro="top"
+  type="button"
+  disabled={locked || introActive}
+  onClick={() => chooseWinner("top")}
+  style={{ height: CARD_H }}
+  className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${topRing} ${
+    locked ? "opacity-95" : "active:scale-[0.995]"
+  }`}
+>
               <div className="w-full h-full flex items-center justify-center">
                 <img src={topTeam.imagePath} alt={topTeam.name} className="w-full h-auto max-h-full" draggable={false} />
               </div>
@@ -839,14 +881,16 @@ export default function Home() {
             </button>
 
             <button
-              type="button"
-              disabled={locked}
-              onClick={() => chooseWinner("bottom")}
-              style={{ height: CARD_H }}
-              className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${bottomRing} ${
-                locked ? "opacity-95" : "active:scale-[0.995]"
-              }`}
-            >
+  ref={bottomBtnRef}
+  data-intro="bottom"
+  type="button"
+  disabled={locked || introActive}
+  onClick={() => chooseWinner("bottom")}
+  style={{ height: CARD_H }}
+  className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${bottomRing} ${
+    locked ? "opacity-95" : "active:scale-[0.995]"
+  }`}
+>
               <div className="w-full h-full flex items-center justify-center">
                 <img
                   src={bottomTeam.imagePath}
@@ -874,8 +918,12 @@ export default function Home() {
               </div>
             </button>
           </div>
+
+          {introActive && <QuizIntroOverlay key={introRunKey} topRef={topBtnRef} bottomRef={bottomBtnRef} />}
         </div>
-      )}
+      </div>
+    
+)}
 
       {view === "results" && (
         <div className="w-full max-w-lg flex-1 flex flex-col gap-2">
