@@ -207,7 +207,7 @@ async function trackEvent(payload: {
 
 export default function Home() {
   const TARGET_PICKS = 24;
-  const MAX_PICKS = 20;
+  const MAX_PICKS = 24;
   const MIN_APPEARANCES_PER_TEAM = 3;
   const REVEAL_MS = 450;
 
@@ -282,6 +282,46 @@ export default function Home() {
   function setViewSafe(next: View) {
     if (next !== "global") setLastNonGlobalView(next);
     setView(next);
+  }
+
+  function resetAndStartRanking() {
+    // reset quiz state
+    setResults([]);
+    setRatings(() => {
+      const initial: Record<number, number> = {};
+      for (const t of teams) initial[t.id] = 1500;
+      return initial;
+    });
+    setSeenCounts(() => {
+      const initial: Record<number, number> = {};
+      for (const t of teams) initial[t.id] = 0;
+      return initial;
+    });
+  
+    setSelected(null);
+    setLocked(false);
+  
+    // reset results-page share UI state so impressions fire correctly next run
+    setShareVariant(null);
+    setShareLabel("Share Result");
+    setShareImpressionSent(false);
+  
+    // reset result-side data that’s derived/fetched
+    setTop1Pct(null);
+    setTop1Counts(null);
+  
+    // pick a fresh first matchup using defaults
+    const initialRatings: Record<number, number> = {};
+    const initialSeen: Record<number, number> = {};
+    for (const t of teams) {
+      initialRatings[t.id] = 1500;
+      initialSeen[t.id] = 0;
+    }
+    const nextMatch = pickNextMatchup(initialRatings, initialSeen);
+    setTopIndex(nextMatch.topIndex);
+    setBottomIndex(nextMatch.bottomIndex);
+  
+    setViewSafe("rank");
   }
 
   function startRanking() {
@@ -1055,11 +1095,11 @@ export default function Home() {
                   </button>
 
                   <button
-                    onClick={() => setViewSafe("rank")}
-                    className="px-3 py-2.5 rounded-xl font-semibold bg-white/10 hover:bg-white/15 border border-white/10"
-                  >
-                    Re-rank
-                  </button>
+  onClick={resetAndStartRanking}
+  className="px-3 py-2.5 rounded-xl font-semibold bg-white/10 hover:bg-white/15 border border-white/10"
+>
+  Re-rank
+</button>
                 </div>
 
                 <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
