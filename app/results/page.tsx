@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "2026 F1 Livery Ranking Results",
@@ -25,7 +24,7 @@ export const metadata: Metadata = {
         url: "/images/social/og.png",
         width: 1200,
         height: 630,
-        alt: "RankF1 - Rank the 2026 F1 cars",
+        alt: "RankF1 - 2026 F1 livery ranking results",
       },
     ],
   },
@@ -39,7 +38,51 @@ export const metadata: Metadata = {
 };
 
 export default function ResultsPage() {
-  // We don’t have a stable deep-link to the client results state yet,
-  // so we send users to the quiz start. They’ll reach results after ranking.
-  redirect("/?view=quiz");
+  return (
+    <main className="min-h-[100dvh] bg-black text-white flex flex-col items-center px-2 pt-1 pb-2">
+      <div className="w-full max-w-lg flex-1 flex items-center justify-center">
+        <div className="w-full bg-gray-900/70 border border-gray-800 rounded-2xl p-6 text-center">
+          <img
+            src="/images/RankF1_logo_web.png"
+            alt="RankF1.com"
+            className="w-full max-w-xs mx-auto mb-3"
+            draggable={false}
+          />
+
+          <h1 className="text-3xl font-bold">2026 F1 livery ranking results</h1>
+          <p className="text-gray-400 mt-3">
+            See how fans rank the 2026 Formula 1 car designs. Then make your own ranking in quick head-to-head matchups.
+          </p>
+
+          <div className="mt-6 grid gap-3">
+            <a
+              href="/?view=quiz"
+              className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl font-semibold text-center"
+            >
+              Start Ranking
+            </a>
+
+            <a
+              href="/?view=global"
+              className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold text-center"
+            >
+              View Global Leaderboard
+            </a>
+          </div>
+
+          <p className="text-[10px] text-gray-500 mt-7">
+            Built by{" "}
+            <a
+              href="https://eave.media"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition"
+            >
+              Eave Media
+            </a>
+          </p>
+        </div>
+      </div>
+    </main>
+  );
 }
