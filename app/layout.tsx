@@ -106,14 +106,40 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-
-        {children}
+    
+<html lang="en">
+  <body
+    className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+  >
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "RankF1",
+          url: "https://rankf1.com",
+          applicationCategory: "GameApplication",
+          operatingSystem: "Web",
+          description:
+            "Rank the 2026 Formula 1 cars and liveries in quick head-to-head matchups. Compare global F1 livery rankings and share your podium.",
+          keywords: [
+            "2026 F1 cars",
+            "2026 F1 liveries",
+            "Formula 1 2026 car designs",
+            "F1 livery ranking",
+            "Rank F1 cars",
+          ],
+          creator: {
+            "@type": "Organization",
+            name: "Eave Media",
+            url: "https://eave.media",
+          },
+        }),
+      }}
+    />
+    {children}
+        
 
         <footer className="w-full text-center text-xs text-gray-500 py-10 border-t border-white/10 bg-black">
           <div>
