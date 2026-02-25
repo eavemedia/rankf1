@@ -491,7 +491,7 @@ useEffect(() => {
     eventName: "results_affiliate_cta_impression",
     userKey,
     experimentKey: AFFILIATE_CTA_EXPERIMENT,
-    variantKey: affiliateVariant,
+    variantKey: affiliateVariant ?? undefined,
     props: {
       categoryId: CATEGORY_ID_2026_LIVERIES,
       top1Slug: top1Local.slug,
