@@ -749,22 +749,21 @@ useEffect(() => {
 <h1 className="text-3xl font-bold">Rank the 2026 F1 Cars</h1>
 <p className="text-gray-400 mt-3">Quick head-to-head matchups. Takes under a minute.</p>
 
-            <div className="mt-6 grid gap-3">
-              <button
-                onClick={startRanking}
-                className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl font-semibold"
+<div className="mt-6 grid gap-3">
+              <a
+                href="/quiz"
+                className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl font-semibold text-center"
               >
                 Make Your Rankings
-              </button>
+              </a>
 
-              <button
-                onClick={showGlobal}
-                className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold"
+              <a
+                href="/global"
+                className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold text-center"
               >
                 See Global Results
-              </button>
+              </a>
             </div>
-
             <p className="text-[10px] text-gray-500 mt-7">
   Built by{" "}
   <a
