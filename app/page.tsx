@@ -274,12 +274,41 @@ export default function Home() {
  
    // Global share modal
    const [globalShareOpen, setGlobalShareOpen] = useState(false);
-// Intro Animation
 
-   const [introActive, setIntroActive] = useState(false);
-   const [introRunKey, setIntroRunKey] = useState(0);
-   const topBtnRef = useRef<HTMLButtonElement | null>(null);
-   const bottomBtnRef = useRef<HTMLButtonElement | null>(null);
+  // Intro Animation
+  const [introActive, setIntroActive] = useState(false);
+  const [introRunKey, setIntroRunKey] = useState(0);
+  const topBtnRef = useRef<HTMLButtonElement | null>(null);
+  const bottomBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  // Deep-link support for SEO entry points (runs once on first load)
+  const didInitFromUrl = useRef(false);
+
+  useEffect(() => {
+    if (didInitFromUrl.current) return;
+    didInitFromUrl.current = true;
+
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = (params.get("view") ?? "").toLowerCase();
+
+    if (viewParam === "global") {
+      setViewSafe("global");
+      return;
+    }
+
+    if (viewParam === "quiz") {
+      resetAndStartRanking({ showIntro: true });
+      return;
+    }
+
+    if (viewParam === "rank") {
+      resetAndStartRanking({ showIntro: false });
+      return;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Global leaderboard
   const [globalLoading, setGlobalLoading] = useState(false);
