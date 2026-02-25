@@ -33,8 +33,8 @@ export const metadata: Metadata = {
 
 export default function F12026Page() {
   return (
-    <main className="min-h-[100dvh] bg-black text-white px-4 py-10 flex justify-center">
-      <div className="w-full max-w-3xl">
+<main className="min-h-[100dvh] bg-black text-white flex items-center justify-center px-4 py-10">
+<div className="w-full max-w-3xl text-center">
 
         <h1 className="text-4xl font-bold mb-6">
           2026 F1 Cars and Liveries
