@@ -738,9 +738,11 @@ useEffect(() => {
     <main className="min-h-[100dvh] bg-black text-white flex flex-col items-center px-2 pt-1 pb-2">
             {/* SEO discovery links (not visible, does not affect layout) */}
             <nav aria-label="Primary" className="sr-only">
-        <a href="/quiz">Rank 2026 F1 cars and liveries</a>
-        <a href="/global">2026 F1 global livery rankings</a>
-      </nav>
+  <a href="/2026-f1-cars">2026 F1 cars and liveries</a>
+  <a href="/quiz">Rank 2026 F1 cars and liveries</a>
+  <a href="/global">2026 F1 global livery rankings</a>
+  <a href="/results">2026 F1 livery ranking results</a>
+</nav>
       {view === "intro" && (
         <div className="w-full max-w-lg flex-1 flex items-center justify-center">
           <div className="w-full bg-gray-900/70 border border-gray-800 rounded-2xl p-6 text-center">
