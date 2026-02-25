@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "RankF1",
-  description: "Rank the 2026 Formula 1 liveries",
+  description: "Rank the 2026 Formula 1 Cars",
   other: {
     "impact-site-verification": "5929e33f-421d-48fe-832e-cce304a77683",
   },
@@ -32,8 +32,8 @@ export default function RootLayout({
       >
         {children}
       
-        <footer className="w-full text-center text-xs text-gray-500 py-6 border-t border-white/10 mt-12">
-  <div>© {new Date().getFullYear()} RankF1</div>
+        <footer className="w-full text-center text-xs text-gray-500 py-10 border-t border-white/10 bg-black">
+          <div>© {new Date().getFullYear()} RankF1 | © {new Date().getFullYear()} Eave Media</div>
   <div className="mt-2 space-x-4">
     <a href="/privacy" className="hover:underline">Privacy Policy</a>
     <a href="mailto:michael@eave.media" className="hover:underline">Contact</a>

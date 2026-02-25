@@ -10,7 +10,6 @@ type Matchup = { topId: number; bottomId: number; winnerId: number };
 type View = "intro" | "rank" | "results" | "global";
 
 const CATEGORY_ID_2026_LIVERIES = "eb609f45-a2cd-4d76-bf54-91a5f2740253";
-
 const teams: Team[] = [
   { id: 1, name: "Red Bull", slug: "red-bull", imagePath: "/images/2026-liveries/red-bull.jpg" },
   { id: 2, name: "Racing Bulls", slug: "racing-bulls", imagePath: "/images/2026-liveries/racing-bulls.jpg" },
@@ -24,6 +23,35 @@ const teams: Team[] = [
   { id: 10, name: "Cadillac", slug: "cadillac", imagePath: "/images/2026-liveries/cadillac.jpg" },
   { id: 11, name: "Haas", slug: "haas", imagePath: "/images/2026-liveries/haas.jpg" },
 ];
+
+
+const TEAM_LOGO: Record<string, string> = {
+  alpine: "/images/logos/2026alpinelogowhite.avif",
+  "aston-martin": "/images/logos/2026astonmartinlogowhite.avif",
+  audi: "/images/logos/2026audilogowhite.avif",
+  cadillac: "/images/logos/2026cadillaclogowhite.avif",
+  ferrari: "/images/logos/2026ferrarilogowhite.avif",
+  haas: "/images/logos/2026haasf1teamlogowhite.avif",
+  mclaren: "/images/logos/2026mclarenlogowhite.avif",
+  mercedes: "/images/logos/2026mercedeslogowhite.avif",
+  "racing-bulls": "/images/logos/2026racingbullslogowhite.avif",
+  "red-bull": "/images/logos/2026redbullracinglogowhite.avif",
+  williams: "/images/logos/2026williamslogowhite.avif",
+};
+
+const AFFILIATE_URL: Record<string, string> = {
+  alpine: "https://f1.pxf.io/Pz0W5e",
+  "aston-martin": "https://f1.pxf.io/AgoGbo",
+  audi: "https://f1.pxf.io/ZVdRZX",
+  cadillac: "https://f1.pxf.io/X4xKVX",
+  ferrari: "https://f1.pxf.io/B5X16y",
+  haas: "https://f1.pxf.io/zzaB7r",
+  mclaren: "https://f1.pxf.io/0GJ1eR",
+  mercedes: "https://f1.pxf.io/n41B7A",
+  "racing-bulls": "https://f1.pxf.io/2RrJA7",
+  "red-bull": "https://f1.pxf.io/4aeq1n",
+  williams: "https://f1.pxf.io/yZRB73",
+};
 
 // Official 2026 livery colors (hex)
 const TEAM_COLOR: Record<string, string> = {
@@ -40,19 +68,6 @@ const TEAM_COLOR: Record<string, string> = {
   williams: "#1868DB",
 };
 
-const TEAM_LOGO: Record<string, string> = {
-  alpine: "/images/logos/2026alpinelogowhite.avif",
-  "aston-martin": "/images/logos/2026astonmartinlogowhite.avif",
-  audi: "/images/logos/2026audilogowhite.avif",
-  cadillac: "/images/logos/2026cadillaclogowhite.avif",
-  ferrari: "/images/logos/2026ferrarilogowhite.avif",
-  haas: "/images/logos/2026haasf1teamlogowhite.avif",
-  mclaren: "/images/logos/2026mclarenlogowhite.avif",
-  mercedes: "/images/logos/2026mercedeslogowhite.avif",
-  "racing-bulls": "/images/logos/2026racingbullslogowhite.avif",
-  "red-bull": "/images/logos/2026redbullracinglogowhite.avif",
-  williams: "/images/logos/2026williamslogowhite.avif",
-};
 
 const SHARE_DEFAULT_MODE_EXPERIMENT = "share_modal_layout";
 
@@ -207,9 +222,9 @@ async function trackEvent(payload: {
 }
 
 export default function Home() {
-  const TARGET_PICKS = 24;
-  const MAX_PICKS = 24;
-  const MIN_APPEARANCES_PER_TEAM = 3;
+  const TARGET_PICKS = 2;
+  const MAX_PICKS = 2;
+  const MIN_APPEARANCES_PER_TEAM = 0;
   const REVEAL_MS = 450;
 
   // Quiz matchup card height (use dvh for iOS Safari)
@@ -217,6 +232,10 @@ export default function Home() {
 
   // Results-page A/B (only this test)
   const SHARE_CTA_EXPERIMENT = "results_share_cta_v1";
+
+  const AFFILIATE_CTA_EXPERIMENT = "results_affiliate_cta_v1";
+  const [affiliateVariant, setAffiliateVariant] = useState<"A" | "B" | null>(null);
+  const [affiliateImpressionSent, setAffiliateImpressionSent] = useState(false);
 
   const [view, setView] = useState<View>("intro");
   const [lastNonGlobalView, setLastNonGlobalView] = useState<View>("intro");
@@ -291,8 +310,9 @@ export default function Home() {
     setView(next);
   }
 
-  function resetAndStartRanking() {
-    // reset quiz state
+  function resetAndStartRanking(opts?: { showIntro?: boolean }) {
+    const showIntro = opts?.showIntro ?? false;
+  // reset quiz state
     setResults([]);
     setRatings(() => {
       const initial: Record<number, number> = {};
@@ -312,7 +332,8 @@ export default function Home() {
     setShareVariant(null);
     setShareLabel("Share Result");
     setShareImpressionSent(false);
-  
+    setAffiliateImpressionSent(false);
+
     // reset result-side data that’s derived/fetched
     setTop1Pct(null);
     setTop1Counts(null);
@@ -329,25 +350,22 @@ export default function Home() {
     setBottomIndex(nextMatch.bottomIndex);
   
     setViewSafe("rank");
-    // force intro every time
-setIntroRunKey((k) => k + 1);
-setIntroActive(true);
 
-window.setTimeout(() => {
+if (showIntro) {
+  setIntroRunKey((k) => k + 1);
+  setIntroActive(true);
+
+  window.setTimeout(() => {
+    setIntroActive(false);
+  }, 7250);
+} else {
   setIntroActive(false);
-}, 7250);
+}
+
   }
 
   function startRanking() {
-    setViewSafe("rank");
-  
-    // force intro every time
-    setIntroRunKey((k) => k + 1);
-    setIntroActive(true);
-  
-    window.setTimeout(() => {
-      setIntroActive(false);
-    }, 7250);
+    resetAndStartRanking({ showIntro: true });
   }
 
   function showGlobal() {
@@ -415,6 +433,15 @@ window.setTimeout(() => {
     setShareLabel(v === "share_my_podium" ? "Share My Podium" : "Share Result");
   }, [view]);
 
+  // Assign Results affiliate CTA variant (deterministic A/B)
+  useEffect(() => {
+    if (view !== "results") return;
+
+    const userKey = getOrCreateUserKey();
+    const v = assignVariantAB(userKey, AFFILIATE_CTA_EXPERIMENT);
+    setAffiliateVariant(v);
+  }, [view]);
+
   // Assign new Share default mode variant (deterministic)
   useEffect(() => {
     if (view !== "results") return;
@@ -445,6 +472,42 @@ window.setTimeout(() => {
 
     setShareImpressionSent(true);
   }, [view, shareVariant, shareImpressionSent, sortedRanking, SHARE_CTA_EXPERIMENT]);
+
+// Log affiliate CTA impression (once)
+useEffect(() => {
+  if (view !== "results") return;
+  if (!affiliateVariant) return;
+  if (affiliateImpressionSent) return;
+
+  const top1Local = sortedRanking?.[0];
+  if (!top1Local) return;
+
+  const affiliateUrl = AFFILIATE_URL[top1Local.slug] ?? null;
+  if (!affiliateUrl) return;
+
+  const userKey = getOrCreateUserKey();
+
+  trackEvent({
+    eventName: "results_affiliate_cta_impression",
+    userKey,
+    experimentKey: AFFILIATE_CTA_EXPERIMENT,
+    variantKey: affiliateVariant,
+    props: {
+      categoryId: CATEGORY_ID_2026_LIVERIES,
+      top1Slug: top1Local.slug,
+      top1Name: top1Local.name,
+      affiliateUrl,
+    },
+  });
+
+  setAffiliateImpressionSent(true);
+}, [
+  view,
+  affiliateImpressionSent,
+  affiliateVariant,
+  sortedRanking,
+  AFFILIATE_CTA_EXPERIMENT,
+]);
 
   // Submit final ranking to Supabase when Results view shows
   useEffect(() => {
@@ -585,11 +648,39 @@ window.setTimeout(() => {
     }
   }
 
-  function handleEmailSubmit() {
-    if (!email.trim()) return;
-    setEmailStatus("ok");
-    window.setTimeout(() => setEmailStatus("idle"), 2500);
-    setEmail("");
+  async function handleEmailSubmit() {
+    const raw = email;
+    const normalized = raw.trim().toLowerCase();
+  
+    console.log("[email] click", { raw, normalized });
+  
+    if (!normalized) return;
+  
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalized,
+          userKey: getOrCreateUserKey(),
+          source: "results_page",
+          context: {
+            categoryId: CATEGORY_ID_2026_LIVERIES,
+            top1Slug: sortedRanking?.[0]?.slug ?? null,
+          },
+        }),
+      });
+  
+      const json = await res.json().catch(() => null);
+      console.log("[email] response", { ok: res.ok, json });
+  
+      if (!res.ok || !json?.ok) return;
+  
+      setEmailStatus("ok");
+      setEmail("");
+    } catch (e) {
+      console.log("[email] error", e);
+    }
   }
 
   const topRing =
@@ -619,8 +710,15 @@ window.setTimeout(() => {
       {view === "intro" && (
         <div className="w-full max-w-lg flex-1 flex items-center justify-center">
           <div className="w-full bg-gray-900/70 border border-gray-800 rounded-2xl p-6 text-center">
-            <h1 className="text-3xl font-bold">Rank the 2026 F1 Liveries</h1>
-            <p className="text-gray-400 mt-3">Quick head-to-head matchups. Takes under a minute.</p>
+          <img
+  src="/images/RankF1_logo_web.png"
+  alt="RankF1.com"
+  className="w-full max-w-xs mx-auto mb-3"
+  draggable={false}
+/>
+
+<h1 className="text-3xl font-bold">Rank the 2026 F1 Cars</h1>
+<p className="text-gray-400 mt-3">Quick head-to-head matchups. Takes under a minute.</p>
 
             <div className="mt-6 grid gap-3">
               <button
@@ -638,13 +736,23 @@ window.setTimeout(() => {
               </button>
             </div>
 
-            <p className="text-xs text-gray-500 mt-5">rankf1.com</p>
+            <p className="text-[10px] text-gray-500 mt-7">
+  Built by{" "}
+  <a
+    href="https://eave.media"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="hover:text-white transition"
+  >
+    Eave Media
+  </a>
+</p>
           </div>
         </div>
       )}
 
 {view === "global" && (
-        <div key="global" className="w-full max-w-lg flex flex-col min-h-[100dvh]">
+        <div key="global" className="w-full max-w-lg flex flex-col min-h-[100dvh] md:justify-center">
           <div className="bg-gray-900/70 border border-gray-800 rounded-2xl p-6">
             <div className="text-center mb-0 -mt-4">
               <img
@@ -784,7 +892,7 @@ window.setTimeout(() => {
             
           </div>
 
-          <div className="flex-1 flex items-start pt-.5">
+          <div className="flex-1 flex items-start pt-.5 md:flex-none">
             <div className="w-full max-w-lg mt-2 grid grid-cols-2 gap-2">
             <button
   onClick={() => {
@@ -855,7 +963,7 @@ window.setTimeout(() => {
   type="button"
   disabled={locked || introActive}
   onClick={() => chooseWinner("top")}
-  style={{ height: CARD_H }}
+  style={{ height: "min(40dvh, 409.6px)" }}
   className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${topRing} ${
     locked ? "opacity-95" : "active:scale-[0.995]"
   }`}
@@ -886,7 +994,7 @@ window.setTimeout(() => {
   type="button"
   disabled={locked || introActive}
   onClick={() => chooseWinner("bottom")}
-  style={{ height: CARD_H }}
+  style={{ height: "min(40dvh, 409.6px)" }}
   className={`relative w-full overflow-hidden rounded-2xl shadow-xl transition ${bottomRing} ${
     locked ? "opacity-95" : "active:scale-[0.995]"
   }`}
@@ -926,7 +1034,7 @@ window.setTimeout(() => {
 )}
 
       {view === "results" && (
-        <div className="w-full max-w-lg flex-1 flex flex-col gap-2">
+        <div className="w-full max-w-lg flex-1 flex flex-col gap-2 md:justify-center">
           <div className="flex items-center justify-between gap-3">
             <div className="leading-tight">
               <div className="text-base font-semibold">Personal Results</div>
@@ -948,10 +1056,11 @@ window.setTimeout(() => {
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 flex flex-col gap-2">
+          <div className="flex-1 min-h-0 flex flex-col gap-2 md:flex-none">
             {/* Winner card (no layout shift) */}
             <div
               className="relative overflow-hidden rounded-2xl border border-white/10"
+              
               style={{
                 flex: "0 0 36%",
                 backgroundSize: "cover",
@@ -963,6 +1072,16 @@ window.setTimeout(() => {
                 `,
               }}
             >
+              
+              <div className="absolute top-3 right-3 z-20 w-1/3">
+  <img
+    src="/images/RankF1_logo_web.png"
+    alt="RankF1"
+    className="w-full h-auto opacity-90"
+    draggable={false}
+  />
+</div>
+
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_10%,rgba(255,255,255,0.06),rgba(0,0,0,0)_45%)]" />
 
               {/* Winner image as subtle background */}
@@ -993,12 +1112,41 @@ window.setTimeout(() => {
                       {shareLabel}
                     </button>
 
-                    <button
-                      type="button"
-                      className="inline-flex w-fit max-w-full items-center justify-center px-3 py-2.5 rounded-xl font-semibold bg-white/10 hover:bg-white/15 border border-white/10 text-white whitespace-nowrap"
-                    >
-                      Your #1 Team’s Gear →
-                    </button>
+                    <a
+  href={AFFILIATE_URL[top1?.slug ?? ""] ?? "#"}
+  target="_blank"
+  rel="nofollow sponsored noopener"
+  onClick={() => {
+    const top1Local = sortedRanking?.[0];
+    if (!top1Local) return;
+
+    const affiliateUrl = AFFILIATE_URL[top1Local.slug] ?? null;
+    if (!affiliateUrl) return;
+
+    const userKey = getOrCreateUserKey();
+
+    trackEvent({
+      eventName: "results_affiliate_cta_click",
+      userKey,
+      experimentKey: AFFILIATE_CTA_EXPERIMENT,
+      variantKey: affiliateVariant,
+      props: {
+        categoryId: CATEGORY_ID_2026_LIVERIES,
+        top1Slug: top1Local.slug,
+        top1Name: top1Local.name,
+        affiliateUrl,
+      },
+    });
+  }}
+  className="inline-flex w-fit max-w-full items-center justify-center px-3 py-2.5 rounded-xl font-semibold bg-white/10 hover:bg-white/15 border border-white/10 text-white whitespace-nowrap"
+>
+{affiliateVariant
+  ? affiliateVariant === "B"
+    ? `Shop Official ${top1?.name ?? "Team"} Gear →`
+    : "Your #1 Team’s Gear →"
+  : "Your #1 Team’s Gear →"}
+
+</a>
                   </div>
                 </div>
               </div>
@@ -1143,7 +1291,7 @@ window.setTimeout(() => {
                   </button>
 
                   <button
-  onClick={resetAndStartRanking}
+  onClick={() => resetAndStartRanking({ showIntro: false })}
   className="px-3 py-2.5 rounded-xl font-semibold bg-white/10 hover:bg-white/15 border border-white/10"
 >
   Re-rank
@@ -1154,7 +1302,7 @@ window.setTimeout(() => {
                   <input
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Get updates when Global Results goes live"
+                    placeholder="Be first to play"
                     className="w-full px-3 py-2.5 rounded-xl bg-black/30 border border-white/10 outline-none text-sm placeholder:text-gray-500"
                     type="email"
                     inputMode="email"
@@ -1164,7 +1312,7 @@ window.setTimeout(() => {
                     onClick={handleEmailSubmit}
                     className="px-3 py-2.5 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/15 border border-white/10"
                   >
-                    {emailStatus === "ok" ? "Saved" : "Notify me"}
+                    {emailStatus === "ok" ? "You're in" : "Notify me"}
                   </button>
                 </div>
               </div>
