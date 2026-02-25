@@ -28,7 +28,7 @@ function clamp11(names: string[]) {
 function buildGlobalTextShare(names11: string[]) {
   const lines = names11.map((name, i) => `${i + 1}. ${name}`).join("\n");
 
-  return `Global 2026 Livery Leaderboard 🏁
+  return `Global 2026 F1 Car Leaderboard 🏁
 ${lines}
 
 Rank yours →

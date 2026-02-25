@@ -31,7 +31,7 @@ function clamp11(names: string[]) {
 }
 
 function buildTextShare(rank1: string, rank2: string, rank3: string) {
-  return `My 2026 Livery Podium 🏁
+  return `My 2026 F1 Car Podium 🏁
 🥇 ${rank1}
 🥈 ${rank2}
 🥉 ${rank3}
