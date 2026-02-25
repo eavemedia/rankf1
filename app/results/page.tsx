@@ -51,7 +51,8 @@ export default function ResultsPage() {
 
           <h1 className="text-3xl font-bold">2026 F1 livery ranking results</h1>
           <p className="text-gray-400 mt-3">
-            See how fans rank the 2026 Formula 1 car designs. Then make your own ranking in quick head-to-head matchups.
+            See how fans rank the 2026 Formula 1 cars and liveries, then rank the 2026 F1 car designs yourself in quick
+            head-to-head matchups.
           </p>
 
           <div className="mt-6 grid gap-3">
@@ -59,14 +60,14 @@ export default function ResultsPage() {
               href="/?view=quiz"
               className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl font-semibold text-center"
             >
-              Start Ranking
+              Start ranking
             </a>
 
             <a
               href="/?view=global"
               className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold text-center"
             >
-              View Global Leaderboard
+              See global rankings
             </a>
           </div>
 
