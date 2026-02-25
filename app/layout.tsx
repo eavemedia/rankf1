@@ -42,8 +42,10 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://rankf1.com",
     siteName: "RankF1",
-    title: "RankF1",
-    description: "Rank the 2026 Formula 1 Cars",
+    locale: "en_GB",
+    title: "2026 F1 Cars & Liveries - Rank the New Formula 1 Car Designs",
+    description:
+      "Compare and rank the 2026 Formula 1 cars head-to-head. Vote on the new F1 liveries, explore global fan rankings, and share your personal 2026 F1 car podium.",
     images: [
       {
         url: "/images/social/og.png",
