@@ -14,9 +14,15 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://rankf1.com"),
-  title: "2026 F1 Cars & Liveries – Rank the New Formula 1 Car Designs | RankF1",
-description:
-  "Compare and rank the 2026 Formula 1 cars head-to-head. Vote on the new F1 liveries, see global fan rankings, and share your personal 2026 F1 car podium.",
+  title: {
+    default: "2026 F1 Cars & Liveries – Rank the New Formula 1 Car Designs",
+    template: "%s | RankF1",
+  },
+  description:
+    "Compare and rank the 2026 Formula 1 cars head-to-head. Vote on the new F1 liveries, explore global fan rankings, and share your personal 2026 F1 car podium.",
+  alternates: {
+    canonical: "https://rankf1.com",
+  },
   applicationName: "RankF1",
 
   manifest: "/site.webmanifest",
