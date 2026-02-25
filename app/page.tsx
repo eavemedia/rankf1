@@ -736,6 +736,11 @@ useEffect(() => {
 
   return (
     <main className="min-h-[100dvh] bg-black text-white flex flex-col items-center px-2 pt-1 pb-2">
+            {/* SEO discovery links (not visible, does not affect layout) */}
+            <nav aria-label="Primary" className="sr-only">
+        <a href="/quiz">Rank 2026 F1 cars and liveries</a>
+        <a href="/global">2026 F1 global livery rankings</a>
+      </nav>
       {view === "intro" && (
         <div className="w-full max-w-lg flex-1 flex items-center justify-center">
           <div className="w-full bg-gray-900/70 border border-gray-800 rounded-2xl p-6 text-center">
@@ -750,20 +755,20 @@ useEffect(() => {
 <p className="text-gray-400 mt-3">Quick head-to-head matchups. Takes under a minute.</p>
 
 <div className="mt-6 grid gap-3">
-              <a
-                href="/quiz"
-                className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl font-semibold text-center"
-              >
-                Make Your Rankings
-              </a>
+  <button
+    onClick={startRanking}
+    className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl font-semibold"
+  >
+    Make Your Rankings
+  </button>
 
-              <a
-                href="/global"
-                className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold text-center"
-              >
-                See Global Results
-              </a>
-            </div>
+  <button
+    onClick={showGlobal}
+    className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold"
+  >
+    See Global Results
+  </button>
+</div>
             <p className="text-[10px] text-gray-500 mt-7">
   Built by{" "}
   <a
