@@ -71,9 +71,48 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const baseUrl = "https://rankf1.com";
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${baseUrl}/#website`,
+        url: baseUrl,
+        name: "RankF1",
+        description:
+          "Compare and rank the 2026 Formula 1 cars head-to-head. Vote on the new F1 liveries, explore global fan rankings, and share your personal 2026 F1 car podium.",
+        inLanguage: "en",
+      },
+      {
+        "@type": "WebApplication",
+        "@id": `${baseUrl}/#app`,
+        name: "RankF1",
+        url: baseUrl,
+        applicationCategory: "EntertainmentApplication",
+        operatingSystem: "All",
+        isAccessibleForFree: true,
+        inLanguage: "en",
+        description:
+          "An interactive web app for ranking the 2026 F1 cars and liveries with quick head-to-head matchups and shareable results.",
+        publisher: {
+          "@type": "Organization",
+          name: "Eave Media",
+          url: "https://eave.media",
+        },
+      },
+    ],
+  };
+
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+
         {children}
 
         <footer className="w-full text-center text-xs text-gray-500 py-10 border-t border-white/10 bg-black">
