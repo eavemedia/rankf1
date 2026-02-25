@@ -1,3 +1,18 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "Privacy policy for RankF1, the interactive 2026 Formula 1 car and livery ranking web app.",
+  alternates: {
+    canonical: "https://rankf1.com/privacy",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 export default function Privacy() {
     return (
       <main className="min-h-screen bg-black text-white px-6 py-12">
