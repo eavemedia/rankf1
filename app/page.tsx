@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ShareModal from "@/app/components/share/ShareModal";
 import GlobalShareModal from "@/app/components/share/GlobalShareModal";
 import QuizIntroOverlay from "@/app/components/QuizIntroOverlay";
+import { track } from "@/lib/analytics";
 
 type Team = { id: number; name: string; slug: string; imagePath: string };
 type Matchup = { topId: number; bottomId: number; winnerId: number };
@@ -267,6 +268,7 @@ export default function Home() {
   const [shareVariant, setShareVariant] = useState<"share_result" | "share_my_podium" | null>(null);
   const [shareLabel, setShareLabel] = useState<string>("Share Result");
   const [shareImpressionSent, setShareImpressionSent] = useState(false);
+  const [resultsViewedSent, setResultsViewedSent] = useState(false);
 
    // New: Share system
    const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -283,6 +285,7 @@ export default function Home() {
 
   // Deep-link support for SEO entry points (runs once on first load)
   const didInitFromUrl = useRef(false);
+  const resultsViewedOnceRef = useRef(false);
 
   useEffect(() => {
     if (didInitFromUrl.current) return;
@@ -361,6 +364,7 @@ export default function Home() {
     setShareVariant(null);
     setShareLabel("Share Result");
     setShareImpressionSent(false);
+    setResultsViewedSent(false);
     setAffiliateImpressionSent(false);
 
     // reset result-side data that’s derived/fetched
@@ -379,6 +383,7 @@ export default function Home() {
     setBottomIndex(nextMatch.bottomIndex);
   
     setViewSafe("rank");
+    resultsViewedOnceRef.current = false;
 
 if (showIntro) {
   setIntroRunKey((k) => k + 1);
@@ -394,6 +399,14 @@ if (showIntro) {
   }
 
   function startRanking() {
+    track("quiz_started", {
+      categoryId: CATEGORY_ID_2026_LIVERIES,
+      targetPicks: TARGET_PICKS,
+      maxPicks: MAX_PICKS,
+      minAppearancesPerTeam: MIN_APPEARANCES_PER_TEAM,
+      entryPoint: "intro_button",
+    });
+  
     resetAndStartRanking({ showIntro: true });
   }
 
@@ -446,8 +459,23 @@ if (showIntro) {
       setSelected(null);
       setLocked(false);
 
-      if (nextResults.length >= MAX_PICKS) setViewSafe("results");
-      if (nextResults.length >= TARGET_PICKS && coverageMet) setViewSafe("results");
+      const completed =
+      nextResults.length >= MAX_PICKS || (nextResults.length >= TARGET_PICKS && coverageMet);
+
+    if (completed) {
+      const top1Local = [...teams]
+        .sort((a, b) => (nextRatings[b.id] ?? 0) - (nextRatings[a.id] ?? 0))[0];
+
+      track("quiz_completed", {
+        categoryId: CATEGORY_ID_2026_LIVERIES,
+        picks: nextResults.length,
+        top1Slug: top1Local?.slug ?? null,
+        top1Name: top1Local?.name ?? null,
+      });
+
+      setViewSafe("results");
+    }
+
     }, REVEAL_MS);
   }
 
@@ -538,33 +566,46 @@ useEffect(() => {
   AFFILIATE_CTA_EXPERIMENT,
 ]);
 
-  // Submit final ranking to Supabase when Results view shows
-  useEffect(() => {
-    if (view !== "results") return;
+    // Track results view + submit final ranking to Supabase when Results view shows
+useEffect(() => {
+  if (view !== "results") return;
+  if (sortedRanking.length === 0) return;
 
-    const submit = async () => {
-      const userKey = getOrCreateUserKey();
-      const userToken = getOrCreateUserToken(userKey);
-      const rankingSlugs = sortedRanking.map((t) => t.slug);
+  if (!resultsViewedOnceRef.current) {
+    const top1Local = sortedRanking[0] ?? null;
 
-      const res = await fetch("/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          categoryId: CATEGORY_ID_2026_LIVERIES,
-          userKey,
-          userToken,
-          rankingSlugs,
-        }),
-      });
+    track("results_viewed", {
+      categoryId: CATEGORY_ID_2026_LIVERIES,
+      picks: results.length,
+      top1Slug: top1Local?.slug ?? null,
+      top1Name: top1Local?.name ?? null,
+    });
 
-      const json = await res.json();
-      console.log("API response:", json);
-    };
+    resultsViewedOnceRef.current = true;
+  }
 
-    submit();
-  }, [view, sortedRanking]);
+  const submit = async () => {
+    const userKey = getOrCreateUserKey();
+    const userToken = getOrCreateUserToken(userKey);
+    const rankingSlugs = sortedRanking.map((t) => t.slug);
 
+    const res = await fetch("/api/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        categoryId: CATEGORY_ID_2026_LIVERIES,
+        userKey,
+        userToken,
+        rankingSlugs,
+      }),
+    });
+
+    const json = await res.json();
+    console.log("API response:", json);
+  };
+
+  submit();
+}, [view, sortedRanking, results.length]);
   // Fetch % of fans who ranked your #1 as #1
   useEffect(() => {
     if (view !== "results") return;
@@ -646,6 +687,11 @@ useEffect(() => {
         categoryId: CATEGORY_ID_2026_LIVERIES,
         top1Slug: sortedRanking?.[0]?.slug ?? null,
       },
+    });
+
+    track("share_opened", {
+      categoryId: CATEGORY_ID_2026_LIVERIES,
+      from: "results_primary_cta",
     });
 
     setShareModalOpen(true);
@@ -1160,6 +1206,15 @@ useEffect(() => {
 
     const userKey = getOrCreateUserKey();
 
+    track("affiliate_clicked", {
+      categoryId: CATEGORY_ID_2026_LIVERIES,
+      top1Slug: top1Local.slug,
+      top1Name: top1Local.name,
+      affiliateUrl,
+      variantKey: affiliateVariant ?? null,
+      experimentKey: AFFILIATE_CTA_EXPERIMENT,
+    });
+
     trackEvent({
       eventName: "results_affiliate_cta_click",
       userKey,
@@ -1326,7 +1381,14 @@ useEffect(() => {
                   </button>
 
                   <button
-  onClick={() => resetAndStartRanking({ showIntro: false })}
+  onClick={() => {
+    track("rerank_clicked", {
+      categoryId: CATEGORY_ID_2026_LIVERIES,
+      fromView: "results",
+    });
+
+    resetAndStartRanking({ showIntro: false });
+  }}
   className="px-3 py-2.5 rounded-xl font-semibold bg-white/10 hover:bg-white/15 border border-white/10"
 >
   Re-rank

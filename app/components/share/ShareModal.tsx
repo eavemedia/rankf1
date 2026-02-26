@@ -2,6 +2,7 @@
 
 import { renderStoryImage } from "@/app/components/share/renderStoryImage";
 import { useEffect, useMemo, useState } from "react";
+import { track } from "@/lib/analytics";
 
 
 type Props = {
@@ -106,6 +107,14 @@ export default function ShareModal(props: Props) {
       }
     }
   
+    track("share_type", {
+      type: "copy",
+      ok,
+      winnerSlug: winnerSlug ?? null,
+      experimentKey,
+      variantKey,
+    });
+
     // Track either way (attempt happened)
     trackEvent({
       eventName: "share_copy_text",
@@ -118,7 +127,7 @@ export default function ShareModal(props: Props) {
         ok,
       },
     });
-  
+
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1200);
   
@@ -145,6 +154,13 @@ export default function ShareModal(props: Props) {
       alert("Native share isn’t available here. I copied the text instead.");
       return;
     }
+
+    track("share_type", {
+      type: "native",
+      winnerSlug: winnerSlug ?? null,
+      experimentKey,
+      variantKey,
+    });
 
     try {
       await navigator.share({
