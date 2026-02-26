@@ -3,7 +3,7 @@
 import posthog from "posthog-js";
 import { PostHogProvider } from "posthog-js/react";
 import { usePathname, useSearchParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 
 function makeUserKey() {
   if (typeof crypto !== "undefined" && (crypto as any).randomUUID) {
@@ -71,9 +71,12 @@ export default function PostHogProviderWrapper({ children }: { children: React.R
   }, []);
 
   return (
+   
     <PostHogProvider client={posthog}>
+    <Suspense fallback={null}>
       <PostHogPageview ready={ready} />
-      {children}
-    </PostHogProvider>
+    </Suspense>
+    {children}
+  </PostHogProvider>
   );
 }
