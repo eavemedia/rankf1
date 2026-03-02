@@ -262,9 +262,6 @@ export default function Home() {
   const [top1Pct, setTop1Pct] = useState<number | null>(null);
   const [top1Counts, setTop1Counts] = useState<{ top: number; total: number } | null>(null);
 
-  const [email, setEmail] = useState("");
-  const [emailStatus, setEmailStatus] = useState<"idle" | "ok">("idle");
-
   const [shareVariant, setShareVariant] = useState<"share_result" | "share_my_podium" | null>(null);
   const [shareLabel, setShareLabel] = useState<string>("Share Result");
   const [shareImpressionSent, setShareImpressionSent] = useState(false);
@@ -636,44 +633,43 @@ useEffect(() => {
     run();
   }, [view, sortedRanking]);
 
-  // Fetch Global Leaderboard (pct picked #1 per team)
-  useEffect(() => {
-    if (view !== "global") return;
-
-    setGlobalLoading(true);
-    setGlobalError(null);
-    setGlobalRows(null);
-
-    const run = async () => {
-      try {
-        const res = await fetch(
-          `/api/global-leaderboard?categoryId=${encodeURIComponent(CATEGORY_ID_2026_LIVERIES)}`
-        );
-        const json = await res.json();
-        if (!json?.ok) {
-          setGlobalError(json?.error ?? "Failed to load global leaderboard");
+    // Fetch Global Leaderboard (used by Global view + Results hook lines)
+    useEffect(() => {
+      if (view !== "global" && view !== "results") return;
+  
+      setGlobalLoading(true);
+      setGlobalError(null);
+      setGlobalRows(null);
+  
+      const run = async () => {
+        try {
+          const res = await fetch(
+            `/api/global-leaderboard?categoryId=${encodeURIComponent(CATEGORY_ID_2026_LIVERIES)}`
+          );
+          const json = await res.json();
+          if (!json?.ok) {
+            setGlobalError(json?.error ?? "Failed to load global leaderboard");
+            setGlobalLoading(false);
+            return;
+          }
+  
+          const rows = Array.isArray(json.rows) ? json.rows : [];
+          setGlobalRows(
+            rows.map((r: any) => ({
+              slug: String(r.slug),
+              points: typeof r.points === "number" ? r.points : Number(r.points ?? 0),
+              pct1: typeof r.pct_picked_1 === "number" ? r.pct_picked_1 : Number(r.pct_picked_1 ?? 0),
+            }))
+          );
+        } catch {
+          setGlobalError("Failed to load global leaderboard");
+        } finally {
           setGlobalLoading(false);
-          return;
         }
-
-        const rows = Array.isArray(json.rows) ? json.rows : [];
-        setGlobalRows(
-          rows.map((r: any) => ({
-            slug: String(r.slug),
-            points: typeof r.points === "number" ? r.points : Number(r.points ?? 0),
-            pct1: typeof r.pct_picked_1 === "number" ? r.pct_picked_1 : Number(r.pct_picked_1 ?? 0),
-          }))
-        );
-
-      } catch {
-        setGlobalError("Failed to load global leaderboard");
-      } finally {
-        setGlobalLoading(false);
-      }
-    };
-
-    run();
-  }, [view]);
+      };
+  
+      run();
+    }, [view]);
 
   async function handlePrimaryShare() {
     const userKey = getOrCreateUserKey();
@@ -723,41 +719,7 @@ useEffect(() => {
     }
   }
 
-  async function handleEmailSubmit() {
-    const raw = email;
-    const normalized = raw.trim().toLowerCase();
-  
-    console.log("[email] click", { raw, normalized });
-  
-    if (!normalized) return;
-  
-    try {
-      const res = await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: normalized,
-          userKey: getOrCreateUserKey(),
-          source: "results_page",
-          context: {
-            categoryId: CATEGORY_ID_2026_LIVERIES,
-            top1Slug: sortedRanking?.[0]?.slug ?? null,
-          },
-        }),
-      });
-  
-      const json = await res.json().catch(() => null);
-      console.log("[email] response", { ok: res.ok, json });
-  
-      if (!res.ok || !json?.ok) return;
-  
-      setEmailStatus("ok");
-      setEmail("");
-    } catch (e) {
-      console.log("[email] error", e);
-    }
-  }
-
+ 
   const topRing =
     selected === "top"
       ? "ring-4 ring-green-500"
@@ -777,8 +739,76 @@ useEffect(() => {
   const accentGlowA = hexToRgba(accentHex, 0.42);
   const accentGlowB = hexToRgba(accentHex, 0.14);
 
-  const top1PctText =
+    // Hook lines (Results)
+    const top1PctText =
     top1Pct == null ? "Loading…" : `${Math.max(0, Math.round(top1Pct))}% of fans also ranked this #1`;
+
+  const hookLine1 = useMemo(() => {
+    if (!top1) return "";
+
+    // Need global rows to compute global rank position for the user's #1
+    if (!globalRows || globalRows.length === 0) return "";
+
+    const idx = globalRows.findIndex((r) => r.slug === top1.slug);
+    const globalRank = idx >= 0 ? idx + 1 : null;
+
+    if (!globalRank) return "";
+
+    if (globalRank === 1) return "The world’s favorite. And yours.";
+    if (globalRank >= 2 && globalRank <= 4) return `Strong pick. The world has ${top1.name} at #${globalRank}.`;
+    if (globalRank >= 5 && globalRank <= 7) return `The world only ranked them #${globalRank}.`;
+    return `Woah. The world ranked them #${globalRank}.`;
+  }, [top1, globalRows]);
+
+  const hookLine2 = useMemo(() => {
+    if (!globalRows || globalRows.length === 0) return "";
+    if (!sortedRanking || sortedRanking.length === 0) return "";
+
+    const globalRankBySlug: Record<string, number> = {};
+    globalRows.forEach((r, i) => {
+      globalRankBySlug[r.slug] = i + 1;
+    });
+
+    const userRankBySlug: Record<string, number> = {};
+    sortedRanking.forEach((t, i) => {
+      userRankBySlug[t.slug] = i + 1;
+    });
+
+    type Candidate = { slug: string; teamName: string; userRank: number; globalRank: number; delta: number; absDelta: number };
+
+    const candidates: Candidate[] = sortedRanking.map((t) => {
+      const userRank = userRankBySlug[t.slug];
+      const globalRank = globalRankBySlug[t.slug] ?? 0;
+      const delta = userRank - globalRank; // positive = you ranked them lower than global
+      const absDelta = Math.abs(delta);
+
+      return {
+        slug: t.slug,
+        teamName: t.name,
+        userRank,
+        globalRank,
+        delta,
+        absDelta,
+      };
+    });
+
+    const dramatic = candidates.filter((c) => c.absDelta >= 4);
+    if (dramatic.length === 0) return "Your picks closely match the global grid.";
+
+    // Tie-break: prefer delta > 0 (you ranked lower than global).
+    // If multiple, choose the one with the largest userRank (lowest in your grid).
+    const preferred = dramatic
+      .filter((c) => c.delta > 0)
+      .sort((a, b) => b.userRank - a.userRank);
+
+    const chosen = (preferred[0] ?? dramatic.sort((a, b) => b.absDelta - a.absDelta)[0]) ?? null;
+    if (!chosen) return "Your picks closely match the global grid.";
+
+    if (chosen.delta > 0) {
+      return `Your grid has ${chosen.teamName} ${chosen.absDelta} spots lower than most.`;
+    }
+    return `Your grid has ${chosen.teamName} ${chosen.absDelta} spots higher than most.`;
+  }, [globalRows, sortedRanking]);
 
   return (
     <main className="min-h-[100dvh] bg-black text-white flex flex-col items-center px-2 pt-1 pb-2">
@@ -1182,7 +1212,12 @@ useEffect(() => {
                   <div>
                     <div className="text-xs text-gray-300/90">Your #1</div>
                     <div className="mt-1 text-2xl font-extrabold tracking-tight leading-none">{top1?.name ?? "—"}</div>
-                    <div className="mt-2 text-xs text-gray-300/80">{top1PctText}</div>
+                    <div className="mt-2 text-base font-semibold text-gray-100">
+  {hookLine1}
+</div>
+<div className="mt-1 text-sm text-gray-400">
+  {hookLine2}
+</div>
                   </div>
 
                   <div className="flex flex-col gap-2 pt-2">
@@ -1393,24 +1428,6 @@ useEffect(() => {
 >
   Re-rank
 </button>
-                </div>
-
-                <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
-                  <input
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Be first to play"
-                    className="w-full px-3 py-2.5 rounded-xl bg-black/30 border border-white/10 outline-none text-sm placeholder:text-gray-500"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                  />
-                  <button
-                    onClick={handleEmailSubmit}
-                    className="px-3 py-2.5 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/15 border border-white/10"
-                  >
-                    {emailStatus === "ok" ? "You're in" : "Notify me"}
-                  </button>
                 </div>
               </div>
             </div>
