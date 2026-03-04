@@ -841,11 +841,18 @@ useEffect(() => {
   </button>
 
   <button
-    onClick={showGlobal}
-    className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold"
-  >
-    See Global Results
-  </button>
+  onClick={() => {
+    track("global_intro_viewed", {
+      categoryId: CATEGORY_ID_2026_LIVERIES,
+    });
+
+    showGlobal();
+  }}
+  className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold"
+>
+  See Global Results
+</button>
+
 </div>
             <p className="text-[10px] text-gray-500 mt-7">
   Built by{" "}
@@ -1152,12 +1159,18 @@ useEffect(() => {
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setViewSafe("global")}
-                className="px-3 py-2 rounded-xl text-sm bg-white/10 hover:bg-white/15 border border-white/10"
-              >
-                Global Rankings
-              </button>
+              
+            <button
+  onClick={() => {
+    track("global_viewed", {
+      categoryId: CATEGORY_ID_2026_LIVERIES,
+    });
+    setViewSafe("global");
+  }}
+  className="px-3 py-2 rounded-xl text-sm bg-white/10 hover:bg-white/15 border border-white/10"
+>
+  Global Rankings
+</button>
               <button
                 onClick={backToIntro}
                 className="px-3 py-2 rounded-xl text-sm bg-white/10 hover:bg-white/15 border border-white/10"
